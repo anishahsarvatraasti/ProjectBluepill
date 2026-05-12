@@ -184,6 +184,15 @@ create table if not exists public.checkins (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.ai_checkin_streaks (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  current_streak integer not null default 0 check (current_streak >= 0),
+  best_streak integer not null default 0 check (best_streak >= 0),
+  last_checkin_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.progress_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -393,6 +402,7 @@ create index if not exists idx_tasks_user_due_status on public.tasks(user_id, du
 create index if not exists idx_habits_user on public.habits(user_id);
 create index if not exists idx_habit_logs_user_date on public.habit_logs(user_id, date);
 create index if not exists idx_checkins_user_created on public.checkins(user_id, created_at desc);
+create index if not exists idx_ai_checkin_streaks_last_date on public.ai_checkin_streaks(user_id, last_checkin_date desc);
 create index if not exists idx_progress_logs_user_date on public.progress_logs(user_id, date desc);
 create index if not exists idx_ai_feedback_user_created on public.ai_feedback(user_id, created_at desc);
 create index if not exists idx_agent_conversations_user_updated on public.agent_conversations(user_id, updated_at desc);
@@ -454,6 +464,7 @@ alter table public.tasks enable row level security;
 alter table public.habits enable row level security;
 alter table public.habit_logs enable row level security;
 alter table public.checkins enable row level security;
+alter table public.ai_checkin_streaks enable row level security;
 alter table public.progress_logs enable row level security;
 alter table public.ai_feedback enable row level security;
 alter table public.agent_conversations enable row level security;
@@ -503,6 +514,10 @@ create policy "Users can manage own habit logs" on public.habit_logs
 
 drop policy if exists "Users can manage own checkins" on public.checkins;
 create policy "Users can manage own checkins" on public.checkins
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "Users can manage own ai checkin streak" on public.ai_checkin_streaks;
+create policy "Users can manage own ai checkin streak" on public.ai_checkin_streaks
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 drop policy if exists "Users can manage own progress logs" on public.progress_logs;

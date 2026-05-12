@@ -16,6 +16,8 @@ Only tracks what is done and what is still pending.
 | Supabase local auth URL set to `localhost:3000` | [x] Done |
 | Initial database migration file exists | [x] Done |
 | Database push command completed against Supabase cloud | [x] Done |
+| AI check-in streak migration file exists | [x] Done |
+| AI check-in streak migration pushed to Supabase cloud | [x] Done |
 | Worker can run locally | [x] Done |
 | Google OAuth local origin added | [x] Done |
 

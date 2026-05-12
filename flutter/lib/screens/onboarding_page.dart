@@ -4,6 +4,7 @@ import '../data/profile_options.dart';
 import '../models/model_helpers.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/profile_fields.dart';
 
 const _onboardingSteps = [
@@ -140,8 +141,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           icon: _saving
                               ? const SizedBox.square(
                                   dimension: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  child: ExpressiveLoadingIndicator(
+                                      strokeWidth: 2),
                                 )
                               : Icon(_step == _onboardingSteps.length - 1
                                   ? Icons.check_circle_outline

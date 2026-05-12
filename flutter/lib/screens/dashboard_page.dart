@@ -6,6 +6,7 @@ import '../services/ai_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/responsive.dart';
 import 'checkin_page.dart';
 
@@ -61,7 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ExpressiveLoadingIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
@@ -77,6 +78,11 @@ class _DashboardPageState extends State<DashboardPage> {
               data['progress_history'] as List<Map<String, dynamic>>;
           final feedback =
               data['recent_feedback'] as List<Map<String, dynamic>>;
+          final aiCheckinStreak = data['ai_checkin_streak'] is Map
+              ? Map<String, dynamic>.from(data['ai_checkin_streak'] as Map)
+              : null;
+          final checkinStreakDays =
+              intValue(aiCheckinStreak?['current_streak']);
           final lifeScore = intValue(data['life_score']);
           final recent = progress.length > 7
               ? progress.sublist(progress.length - 7)
@@ -226,6 +232,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       value: '$weeklyScore',
                     ),
                     _MetricCard(
+                      title: 'Check-in Streak',
+                      value:
+                          '$checkinStreakDays day${checkinStreakDays == 1 ? '' : 's'}',
+                    ),
+                    _MetricCard(
                       title: 'Task Completion',
                       value: '$taskRate%',
                     ),
@@ -290,7 +301,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 icon: _summarizing
                                     ? const SizedBox.square(
                                         dimension: 16,
-                                        child: CircularProgressIndicator(
+                                        child: ExpressiveLoadingIndicator(
                                           strokeWidth: 2,
                                         ),
                                       )
@@ -508,7 +519,7 @@ class _DashboardHero extends StatelessWidget {
               icon: refreshingAi
                   ? const SizedBox.square(
                       dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: ExpressiveLoadingIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.auto_awesome),
               label: const Text('AI refresh'),

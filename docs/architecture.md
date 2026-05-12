@@ -219,6 +219,7 @@ Examples:
 - Goals
 - Habits
 - Check-ins
+- AI check-in streaks
 - Progress logs
 - Agent conversations
 - Agent messages

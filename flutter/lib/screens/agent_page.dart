@@ -11,6 +11,7 @@ import '../services/ai_service.dart';
 import '../services/google_calendar_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
+import '../ui/expressive_loading_indicator.dart';
 import 'checkin_page.dart';
 
 const _maxAttachments = 4;
@@ -206,7 +207,7 @@ class _AgentPageState extends State<AgentPage> {
                             child: _sending
                                 ? const SizedBox.square(
                                     dimension: 18,
-                                    child: CircularProgressIndicator(
+                                    child: ExpressiveLoadingIndicator(
                                       strokeWidth: 2,
                                     ),
                                   )
@@ -227,7 +228,7 @@ class _AgentPageState extends State<AgentPage> {
                     .colorScheme
                     .surface
                     .withValues(alpha: 0.62),
-                child: const Center(child: CircularProgressIndicator()),
+                child: const Center(child: ExpressiveLoadingIndicator()),
               ),
             ),
         ],
@@ -723,7 +724,7 @@ class _HistoryDrawer extends StatelessWidget {
             const Divider(height: 1),
             Expanded(
               child: loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: ExpressiveLoadingIndicator())
                   : conversations.isEmpty
                       ? const _EmptyHistory()
                       : ListView.separated(

@@ -10,6 +10,7 @@ import '../services/google_tasks_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/google_calendar_sign_in_button.dart';
 
 class TodoPage extends StatefulWidget {
@@ -62,7 +63,7 @@ class _TodoPageState extends State<TodoPage> {
             icon: _ordering
                 ? const SizedBox.square(
                     dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.auto_awesome),
           ),
@@ -82,7 +83,7 @@ class _TodoPageState extends State<TodoPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ExpressiveLoadingIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
@@ -691,7 +692,7 @@ class _TodoPageState extends State<TodoPage> {
                   child: saving
                       ? const SizedBox.square(
                           dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: ExpressiveLoadingIndicator(strokeWidth: 2),
                         )
                       : const Text('Save'),
                 ),
@@ -910,7 +911,7 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
         child: _initializing
             ? const SizedBox(
                 height: 120,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ExpressiveLoadingIndicator()),
               )
             : Column(
                 mainAxisSize: MainAxisSize.min,
@@ -946,7 +947,7 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
                         icon: _busy
                             ? const SizedBox.square(
                                 dimension: 18,
-                                child: CircularProgressIndicator(
+                                child: ExpressiveLoadingIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
@@ -961,7 +962,7 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
                       icon: _busy
                           ? const SizedBox.square(
                               dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: ExpressiveLoadingIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.verified_user_outlined),
                       label: const Text('Allow Tasks access'),
@@ -1000,7 +1001,7 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
             icon: _busy
                 ? const SizedBox.square(
                     dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.sync),
             label: const Text('Sync now'),

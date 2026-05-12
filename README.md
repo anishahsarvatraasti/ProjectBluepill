@@ -1,123 +1,164 @@
 # Project BluePill
 
-Project BluePill is a Flutter + Supabase personal life dashboard. It connects a user's long-term mission to today's tasks, habits, reflections, check-ins, progress score, and Agent feedback.
+Project BluePill is a Flutter + Supabase life operating system. It connects a user's mission, tasks, habits, calendar, AI check-ins, daily streaks, progress analytics, and Agent conversations into one dashboard.
 
-## Features
+## What It Does
 
-- Supabase email/password authentication
-- Interactive onboarding for name, city, DOB, dream goal, skills, and interests
-- Dynamic dashboard with life score, today's focus, tasks, mission progress, habit streaks, AI suggestion, weakness alert, motivation, and weekly chart
-- Task CRUD with priority, category, due date, estimate, completion, missed status, and move-to-tomorrow
-- Google Calendar event scheduling with create, edit, delete, attendees, location, and upcoming event views
-- Google Tasks sync for the Todo list through a dedicated Project BluePill task list
-- Mission hierarchy: dream mission, life/yearly/monthly/weekly goals, parent goals, milestones, progress percentage
-- Habit tracking with frequency, completion logs, missed/partial status, streaks, and completion rate
-- Agent chat with attachments and stored user context through `McpContextService`
-- Morning, afternoon, night, and weekly AI check-ins
-- Natural-language check-in extraction into structured JSON
-- Life score engine using tasks, habits, focus, and reflection
-- Progress analytics with `fl_chart`
-- Settings profile details and connection status
+- Flutter web app with Supabase Auth.
+- Mission, goals, tasks, habits, check-ins, progress, calendar, and settings screens.
+- AI check-ins that extract structured progress from natural language.
+- Daily AI check-in streak tracking with current streak, best streak, and last check-in date.
+- Dashboard and Progress views for life score, focus, completion rates, blockers, habit streaks, and check-in streaks.
+- Agent chat with stored Project BluePill context and attachment metadata.
+- Google Calendar / Tasks browser OAuth integration.
+- Supabase Edge Functions for production agent API entry points.
+- FastAPI worker for queued agent jobs, tool calls, audit logs, and notifications.
 
-## Tech Stack
+## Architecture
 
-- Flutter Material UI
-- Supabase Auth, Postgres, pgvector, Storage, Realtime, and Edge Functions
-- Upstash QStash queue with a Python FastAPI worker for production agent jobs
-- OpenAI Agents SDK as the default production agent framework
-- Firebase Cloud Messaging for push notifications
-- `fl_chart` for charts
-- MCP-style context service in `flutter/lib/services/mcp_context_service.dart`
+```text
+Flutter App
+  -> Supabase Auth
+  -> Supabase Edge Functions
+  -> Supabase Postgres
+  -> Upstash QStash
+  -> FastAPI Worker
+  -> OpenAI Agents SDK
+  -> Tools: Supabase, Google, Firebase
+  -> Audit Logs + Realtime Updates
+  -> Flutter UI
+```
 
-See `docs/architecture.md` for the final production flow and backend responsibilities.
+Full architecture: [docs/architecture.md](docs/architecture.md)
 
-## Project Structure
+## Repository
 
 ```text
 flutter/                     Flutter app root
-flutter/lib/                 Flutter UI and client-safe Supabase calls
-flutter/lib/services/agent_gateway_service.dart
-                             Flutter -> Edge Function gateway client
-supabase/schema.sql          Postgres, RLS, pgvector, Storage, Realtime setup
+flutter/lib/                 UI and client-safe app services
+flutter/lib/services/        Supabase, AI, context, calendar, and agent clients
+supabase/schema.sql          Current database schema source
+supabase/migrations/         Supabase migration files
 supabase/functions/          Edge Functions API gateway
-supabase/functions/_shared/  Auth, permission, audit, QStash helpers
-worker/app/                  FastAPI worker execution engine
-worker/app/agents/           OpenAI Agents SDK orchestration boundary
-worker/app/jobs/             QStash job handlers
-worker/app/tools/            Supabase, memory, Storage, Google, FCM, MCP tools
-docs/architecture.md         Final architecture contract
+worker/app/                  FastAPI worker, jobs, agent boundary, and tools
+docs/                        Architecture, hosting, environment, and checklist docs
 ```
 
-## Setup
+## Documentation
 
-This repository contains the Flutter app source and Supabase schema. If platform folders are missing, generate them after installing Flutter:
+- [docs/architecture.md](docs/architecture.md): production architecture and responsibility boundaries.
+- [docs/app-theme.md](docs/app-theme.md): Material 3 Expressive theme, brand palette, and UI usage rules.
+- [docs/hosting.md](docs/hosting.md): how each service runs locally and in production.
+- [docs/environment.md](docs/environment.md): public env values and backend secrets.
+- [docs/deployment-checklist.md](docs/deployment-checklist.md): what is done and what is still pending.
+
+## Local App
+
+Install Flutter packages:
 
 ```bash
-(cd flutter && flutter create --platforms=android,ios,web .)
+cd flutter
+flutter pub get
 ```
 
-Install packages:
+Create local Flutter env:
 
 ```bash
-(cd flutter && flutter pub get)
+cp .env.example .env
 ```
 
-Create your environment file:
+Run web locally on the required port:
 
 ```bash
-(cd flutter && cp .env.example .env)
+flutter run -d web-server --web-hostname localhost --web-port 3000
 ```
 
-Edit `flutter/.env`:
+Open:
 
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-supabase-anon-key
-GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```text
+http://localhost:3000
 ```
-
-Enable the Google Calendar API and Google Tasks API in Google Cloud, create an OAuth 2.0 Web client, and add your local origin such as `http://127.0.0.1:5174` or `http://localhost:5174` under Authorized JavaScript origins.
-
-Server-only secrets for Edge Functions, workers, QStash, AI providers, and FCM belong in `server.env.example`-style deployment environments, not `flutter/.env`.
 
 ## Supabase
 
-1. Create a Supabase project.
-2. Open the SQL editor.
-3. Run `supabase/schema.sql` from the repository root.
-4. In Authentication settings, configure email confirmation based on your development preference.
-5. Enable Google under Authentication -> Providers if you want Google login.
-6. Add your local and production redirect URLs under Authentication -> URL Configuration. For local web development, add `http://127.0.0.1:5174`.
-7. Add your Supabase URL and anon key to `flutter/.env`.
+The repo is set up for the Supabase cloud project:
 
-Every table has RLS enabled. Policies restrict each user to rows where `auth.uid() = user_id`.
-
-## Run
-
-```bash
-(cd flutter && flutter run -d chrome)
+```text
+Project: Project BluePill
+Ref: qhunsphxuzmheduacull
+Region: Southeast Asia, Singapore
 ```
 
-For mobile:
+Useful commands:
 
 ```bash
-(cd flutter && flutter run -d android)
-(cd flutter && flutter run -d ios)
+supabase projects list
+supabase functions list
+supabase migration list
 ```
 
-## AI Notes
+Deploy Edge Functions:
 
-The final production path is Flutter -> Supabase Auth -> Supabase Edge Functions -> permission/rate-limit check -> `agent_runs` or `scheduled_jobs` -> QStash -> FastAPI worker -> OpenAI Agents SDK -> tool layer -> audit logs and Realtime updates.
+```bash
+supabase functions deploy agent-chat
+supabase functions deploy approve-action
+supabase functions deploy schedule-job
+```
 
-Flutter should call `AgentGatewayService` for production agent work. The older direct AI service remains a local fallback path and should not receive production secrets.
+Push migrations only when ready:
 
-## Core Files
+```bash
+supabase db push
+```
 
-- `flutter/lib/main.dart` initializes dotenv, Supabase, theme, and auth gate.
-- `flutter/lib/services/agent_gateway_service.dart` invokes Edge Functions for agent runs, scheduled jobs, and approvals.
-- `flutter/lib/services/mcp_context_service.dart` is the MCP-style memory/context layer.
-- `supabase/functions/` contains the Edge Function API gateway layer.
-- `worker/app/` contains the FastAPI worker, job handlers, agent boundary, and tool adapters.
-- `flutter/lib/services/progress_engine.dart` calculates and builds daily life score logs.
-- `supabase/schema.sql` creates tables, enums, indexes, and RLS policies.
-- `flutter/test/progress_engine_test.dart` covers the weighted life score formula.
+## Worker
+
+Run locally:
+
+```bash
+cd worker
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Production host: Render Web Service. See [docs/hosting.md](docs/hosting.md).
+
+## Daily AI Check-In Streak
+
+The streak system is backed by `ai_checkin_streaks`.
+
+Rules:
+
+- First AI check-in starts a 1-day streak.
+- Another check-in on the same day does not double count.
+- A check-in on the next day increments the streak.
+- Missing a day resets the current streak to 1.
+- Best streak is preserved.
+
+The app updates the streak after saving a check-in and shows it on the Check-In, Dashboard, and Progress screens.
+
+## Tests
+
+```bash
+cd flutter
+flutter analyze
+flutter test
+```
+
+## Secrets
+
+Flutter only gets public/client-safe values in `flutter/.env`.
+
+Never put these in Flutter:
+
+```text
+SUPABASE_SERVICE_ROLE_KEY
+QSTASH_TOKEN
+WORKER_SHARED_SECRET
+OPENAI_API_KEY
+FIREBASE_PRIVATE_KEY
+```
+
+Use [docs/environment.md](docs/environment.md) for where each value belongs.

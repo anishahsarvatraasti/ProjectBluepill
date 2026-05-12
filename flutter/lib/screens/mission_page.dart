@@ -5,6 +5,7 @@ import '../services/ai_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 
 class MissionPage extends StatefulWidget {
   const MissionPage({super.key});
@@ -55,7 +56,7 @@ class _MissionPageState extends State<MissionPage> {
             icon: _loadingAdvice
                 ? const SizedBox.square(
                     dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.auto_awesome),
           ),
@@ -70,7 +71,7 @@ class _MissionPageState extends State<MissionPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ExpressiveLoadingIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));

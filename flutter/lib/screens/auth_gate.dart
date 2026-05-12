@@ -5,6 +5,7 @@ import '../config/app_config.dart';
 import '../models/model_helpers.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/project_logo.dart';
 import 'auth_page.dart';
 import 'main_shell.dart';
@@ -38,7 +39,7 @@ class _AuthGateState extends State<AuthGate> {
           builder: (context, profileSnapshot) {
             if (profileSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
+                body: Center(child: ExpressiveLoadingIndicator()),
               );
             }
             final profile = profileSnapshot.data;

@@ -147,7 +147,7 @@ class _DesktopSidebar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: 236,
-      color: colorScheme.surface,
+      color: colorScheme.surfaceContainerLow,
       child: SafeArea(
         bottom: false,
         child: Column(
@@ -222,10 +222,19 @@ class _DesktopNavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final shape = RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: BorderSide(
+        color: selected
+            ? colorScheme.secondary.withValues(alpha: 0.30)
+            : Colors.transparent,
+      ),
+    );
     final background =
-        selected ? colorScheme.primaryContainer : Colors.transparent;
-    final foreground =
-        selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface;
+        selected ? colorScheme.secondaryContainer : Colors.transparent;
+    final foreground = selected
+        ? colorScheme.onSecondaryContainer
+        : colorScheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -233,20 +242,15 @@ class _DesktopNavButton extends StatelessWidget {
         message: item.label,
         waitDuration: const Duration(milliseconds: 700),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          customBorder: shape,
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
+            curve: Easing.emphasizedDecelerate,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: background,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected
-                    ? colorScheme.primary.withValues(alpha: 0.24)
-                    : Colors.transparent,
-              ),
+              shape: shape,
             ),
             child: Row(
               children: [
@@ -290,11 +294,13 @@ class _MoreDestinationTile extends StatelessWidget {
       padding: const EdgeInsets.only(top: 6),
       child: ListTile(
         selected: selected,
-        selectedTileColor: colorScheme.primaryContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        selectedTileColor: colorScheme.secondaryContainer,
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
         leading: Icon(
           item.icon,
-          color: selected ? colorScheme.onPrimaryContainer : null,
+          color: selected ? colorScheme.onSecondaryContainer : null,
         ),
         title: Text(
           item.label,

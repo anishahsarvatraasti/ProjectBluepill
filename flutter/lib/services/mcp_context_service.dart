@@ -24,6 +24,7 @@ class McpContextService {
       'habits': await getUserHabits(userId),
       'recent_progress': await getRecentProgress(userId),
       'recent_checkins': await getRecentCheckins(userId),
+      'ai_checkin_streak': await getAiCheckinStreak(userId),
       'recent_feedback': await getRecentFeedback(userId),
       'connected_accounts': await getConnectedAccounts(userId),
       'google_calendar': await getGoogleCalendarContext(userId),
@@ -108,6 +109,41 @@ class McpContextService {
         .order('created_at', ascending: false)
         .limit(limit);
     return rows(data);
+  }
+
+  Future<Map<String, dynamic>?> getAiCheckinStreak(String userId) async {
+    final data = await _client
+        .from('ai_checkin_streaks')
+        .select()
+        .eq('user_id', userId)
+        .maybeSingle();
+    return maybeRow(data);
+  }
+
+  Future<Map<String, dynamic>> recordAiCheckinStreak(
+    String userId, {
+    DateTime? checkinDate,
+  }) async {
+    final previous = await getAiCheckinStreak(userId);
+    final streak = ProgressEngine.buildAiCheckinStreakUpdate(
+      previous: previous,
+      checkinDate: checkinDate ?? DateTime.now(),
+    );
+
+    await _client.from('ai_checkin_streaks').upsert(
+      {
+        ...streak,
+        'user_id': userId,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
+      onConflict: 'user_id',
+    );
+
+    return {
+      ...?previous,
+      ...streak,
+      'user_id': userId,
+    };
   }
 
   Future<List<Map<String, dynamic>>> getRecentFeedback(
@@ -250,6 +286,8 @@ class McpContextService {
     final habits = context['habits'] as List<Map<String, dynamic>>;
     final progress = context['recent_progress'] as List<Map<String, dynamic>>;
     final checkins = context['recent_checkins'] as List<Map<String, dynamic>>;
+    final aiCheckinStreak =
+        context['ai_checkin_streak'] as Map<String, dynamic>?;
     final todayLogs = await getTodayHabitLogs(userId);
 
     final dailyLog = ProgressEngine.buildDailyProgressLog(
@@ -297,6 +335,7 @@ class McpContextService {
       ...context,
       'today_habit_logs': todayLogs,
       'computed_progress': dailyLog,
+      'ai_checkin_streak': aiCheckinStreak,
       'life_score': dailyLog['life_score'],
       'today_focus': _todayFocus(todayTasks, context),
       'ai_suggestion': _localSuggestion(todayTasks, habits, progress),

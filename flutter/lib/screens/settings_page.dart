@@ -6,6 +6,7 @@ import '../models/model_helpers.dart';
 import '../services/supabase_service.dart';
 import '../theme/theme_controller.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/profile_fields.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -65,7 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ExpressiveLoadingIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
@@ -205,7 +206,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: _saving
                           ? const SizedBox.square(
                               dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: ExpressiveLoadingIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save_outlined),
                       label: const Text('Save settings'),

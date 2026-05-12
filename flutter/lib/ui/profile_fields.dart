@@ -55,11 +55,18 @@ class _CityAutocompleteFieldState extends State<CityAutocompleteField> {
         );
       },
       optionsViewBuilder: (context, onSelected, options) {
+        final colorScheme = Theme.of(context).colorScheme;
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
-            elevation: 6,
-            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            color: colorScheme.surfaceContainerHigh,
+            elevation: 3,
+            shadowColor: Colors.black.withValues(alpha: 0.16),
+            shape: RoundedSuperellipseBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 260, maxWidth: 420),
               child: ListView.builder(
@@ -73,9 +80,8 @@ class _CityAutocompleteFieldState extends State<CityAutocompleteField> {
                   return InkWell(
                     onTap: () => onSelected(option),
                     child: Container(
-                      color: highlighted
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
+                      color:
+                          highlighted ? colorScheme.secondaryContainer : null,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
@@ -114,8 +120,11 @@ class DatePickerField extends StatelessWidget {
       validator: (_) => required && value == null ? 'Required' : null,
       builder: (field) {
         final hasValue = value != null;
+        final shape = RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(18),
+        );
         return InkWell(
-          borderRadius: BorderRadius.circular(8),
+          customBorder: shape,
           onTap: () async {
             final now = DateTime.now();
             final selected = await showDatePicker(

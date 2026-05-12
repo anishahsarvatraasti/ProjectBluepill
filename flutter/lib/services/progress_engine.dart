@@ -1,6 +1,39 @@
 import '../models/model_helpers.dart';
 
 class ProgressEngine {
+  static Map<String, dynamic> buildAiCheckinStreakUpdate({
+    required Map<String, dynamic>? previous,
+    required DateTime checkinDate,
+  }) {
+    final checkinDay = DateTime(
+      checkinDate.year,
+      checkinDate.month,
+      checkinDate.day,
+    );
+    final checkinKey = dateKey(checkinDay);
+    final lastCheckinDay = _parseDateOnly(previous?['last_checkin_date']);
+    final current = intValue(previous?['current_streak']);
+    final best = intValue(previous?['best_streak']);
+
+    late final int nextCurrent;
+    if (lastCheckinDay == null) {
+      nextCurrent = 1;
+    } else if (dateKey(lastCheckinDay) == checkinKey) {
+      nextCurrent = current <= 0 ? 1 : current;
+    } else if (checkinDay.difference(lastCheckinDay).inDays == 1) {
+      nextCurrent = current + 1;
+    } else {
+      nextCurrent = 1;
+    }
+
+    final nextBest = best > nextCurrent ? best : nextCurrent;
+    return {
+      'current_streak': nextCurrent,
+      'best_streak': nextBest,
+      'last_checkin_date': checkinKey,
+    };
+  }
+
   static int calculateLifeScore({
     required int tasksCompleted,
     required int tasksMissed,
@@ -80,6 +113,23 @@ class ProgressEngine {
     );
 
     return data;
+  }
+
+  static DateTime? _parseDateOnly(Object? value) {
+    final text = value?.toString();
+    if (text == null || text.trim().isEmpty) return null;
+    final parts = text.split('-');
+    if (parts.length >= 3) {
+      final year = int.tryParse(parts[0]);
+      final month = int.tryParse(parts[1]);
+      final day = int.tryParse(parts[2].split('T').first);
+      if (year != null && month != null && day != null) {
+        return DateTime(year, month, day);
+      }
+    }
+    final parsed = DateTime.tryParse(text);
+    if (parsed == null) return null;
+    return DateTime(parsed.year, parsed.month, parsed.day);
   }
 
   static String? _summaryFromExtracted(Map<String, dynamic>? extracted) {

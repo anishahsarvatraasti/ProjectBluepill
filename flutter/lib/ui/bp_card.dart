@@ -12,7 +12,7 @@ class BpCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Card.filled(
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: padding,
@@ -103,6 +103,10 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    const iconShape = RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.all(Radius.circular(18)),
+    );
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -111,17 +115,32 @@ class EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
+              DecoratedBox(
+                decoration: ShapeDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colorScheme.primaryContainer,
+                      colorScheme.tertiaryContainer,
+                    ],
+                  ),
+                  shape: iconShape,
+                  shadows: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  icon,
-                  size: 30,
-                  color: colorScheme.onPrimaryContainer,
+                child: SizedBox.square(
+                  dimension: 60,
+                  child: Icon(
+                    icon,
+                    size: 30,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),

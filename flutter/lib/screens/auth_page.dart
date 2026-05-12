@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/project_logo.dart';
 
 class AuthPage extends StatefulWidget {
@@ -125,7 +126,7 @@ class _AuthPageState extends State<AuthPage> {
                                 icon: _loading
                                     ? const SizedBox.square(
                                         dimension: 18,
-                                        child: CircularProgressIndicator(
+                                        child: ExpressiveLoadingIndicator(
                                           strokeWidth: 2,
                                         ),
                                       )

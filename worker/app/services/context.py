@@ -65,12 +65,17 @@ async def load_user_context(
             "limit": "20",
         },
     )
+    ai_checkin_streak = await supabase.select(
+        "ai_checkin_streaks",
+        {"user_id": f"eq.{user_id}", "select": "*", "limit": "1"},
+    )
 
     return {
         "profile": profile_rows[0] if profile_rows else None,
         "tasks": tasks,
         "goals": goals,
         "habits": habits,
+        "ai_checkin_streak": ai_checkin_streak[0] if ai_checkin_streak else None,
         "connected_accounts": connected_accounts,
         "google_calendar": _google_calendar_context(connected_accounts),
     }

@@ -9,6 +9,7 @@ import '../services/google_calendar_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/google_calendar_sign_in_button.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -183,7 +184,7 @@ class _CalendarPageState extends State<CalendarPage> {
         ],
       ),
       body: _initializing
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: ExpressiveLoadingIndicator())
           : RefreshIndicator(
               onRefresh: _loadEvents,
               child: ListView(
@@ -463,7 +464,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   child: saving
                       ? const SizedBox.square(
                           dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: ExpressiveLoadingIndicator(strokeWidth: 2),
                         )
                       : const Text('Save'),
                 ),
@@ -566,7 +567,8 @@ class _CalendarPageState extends State<CalendarPage> {
     if (_sameDate(_selectedDate, today)) {
       return _nextWholeHour();
     }
-    return DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 9);
+    return DateTime(
+        _selectedDate.year, _selectedDate.month, _selectedDate.day, 9);
   }
 
   bool _sameDate(DateTime a, DateTime b) {
@@ -603,8 +605,7 @@ class _CalendarPageState extends State<CalendarPage> {
       'start': start?.toIso8601String(),
       'end': end?.toIso8601String(),
       'time_text': _formatEventTime(event),
-      if ((event.location ?? '').trim().isNotEmpty)
-        'location': event.location,
+      if ((event.location ?? '').trim().isNotEmpty) 'location': event.location,
       if ((event.description ?? '').trim().isNotEmpty)
         'description': event.description,
       if ((event.attendees ?? []).isNotEmpty)
@@ -677,7 +678,7 @@ class _ConnectCard extends StatelessWidget {
               icon: busy
                   ? const SizedBox.square(
                       dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: ExpressiveLoadingIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.event_available_outlined),
               label: const Text('Connect Google Calendar'),
@@ -718,7 +719,7 @@ class _AuthorizeCard extends StatelessWidget {
                 icon: busy
                     ? const SizedBox.square(
                         dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: ExpressiveLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.verified_user_outlined),
                 label: const Text('Allow calendar access'),
@@ -872,7 +873,15 @@ class _CalendarMonthView extends StatelessWidget {
     required this.onSelectDate,
   });
 
-  static const _weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  static const _weekdayLabels = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat'
+  ];
 
   final DateTime focusedMonth;
   final DateTime selectedDate;
@@ -1167,8 +1176,7 @@ class _SelectedDayAgenda extends StatelessWidget {
                 event: event,
                 timeText: eventTimeText(event),
                 onEdit: event.id == null ? null : () => onEditEvent(event),
-                onDelete:
-                    event.id == null ? null : () => onDeleteEvent(event),
+                onDelete: event.id == null ? null : () => onDeleteEvent(event),
               ),
               const SizedBox(height: 10),
             ],

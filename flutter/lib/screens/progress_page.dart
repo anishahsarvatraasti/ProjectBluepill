@@ -6,6 +6,7 @@ import '../services/ai_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 import '../ui/responsive.dart';
 
 class ProgressPage extends StatefulWidget {
@@ -33,6 +34,7 @@ class _ProgressPageState extends State<ProgressPage> {
       'progress': await _mcp.getRecentProgress(userId, limit: 30),
       'tasks': await _mcp.getAllTasks(userId),
       'habits': await _mcp.getUserHabits(userId),
+      'ai_checkin_streak': await _mcp.getAiCheckinStreak(userId),
       'feedback': await _mcp.getRecentFeedback(userId, limit: 20),
     };
   }
@@ -53,7 +55,7 @@ class _ProgressPageState extends State<ProgressPage> {
             icon: _summarizing
                 ? const SizedBox.square(
                     dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.auto_awesome),
           ),
@@ -63,7 +65,7 @@ class _ProgressPageState extends State<ProgressPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ExpressiveLoadingIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
@@ -73,7 +75,13 @@ class _ProgressPageState extends State<ProgressPage> {
           final progress = data['progress'] as List<Map<String, dynamic>>;
           final tasks = data['tasks'] as List<Map<String, dynamic>>;
           final habits = data['habits'] as List<Map<String, dynamic>>;
+          final aiCheckinStreak = data['ai_checkin_streak'] is Map
+              ? Map<String, dynamic>.from(data['ai_checkin_streak'] as Map)
+              : null;
           final feedback = data['feedback'] as List<Map<String, dynamic>>;
+          final checkinStreakDays =
+              intValue(aiCheckinStreak?['current_streak']);
+          final bestCheckinStreak = intValue(aiCheckinStreak?['best_streak']);
           final latestScore =
               progress.isEmpty ? 0 : intValue(progress.last['life_score']);
           final recent = progress.length > 7
@@ -129,6 +137,16 @@ class _ProgressPageState extends State<ProgressPage> {
                   _MetricCard(title: 'Daily Life Score', value: '$latestScore'),
                   _MetricCard(
                       title: 'Weekly Life Score', value: '$weeklyScore'),
+                  _MetricCard(
+                    title: 'Check-in Streak',
+                    value:
+                        '$checkinStreakDays day${checkinStreakDays == 1 ? '' : 's'}',
+                  ),
+                  _MetricCard(
+                    title: 'Best Check-in Run',
+                    value:
+                        '$bestCheckinStreak day${bestCheckinStreak == 1 ? '' : 's'}',
+                  ),
                   _MetricCard(title: 'Task Completion', value: '$taskRate%'),
                   _MetricCard(title: 'Habit Completion', value: '$habitRate%'),
                   _MetricCard(title: 'Focus Trend', value: '$focusAvg/10'),

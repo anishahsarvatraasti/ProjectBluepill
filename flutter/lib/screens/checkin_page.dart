@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../models/model_helpers.dart';
 import '../services/ai_service.dart';
 import '../services/mcp_context_service.dart';
 import '../services/progress_engine.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
+import '../ui/expressive_loading_indicator.dart';
 
 class CheckinPage extends StatefulWidget {
   const CheckinPage({super.key});
@@ -22,6 +24,7 @@ class _CheckinPageState extends State<CheckinPage> {
   String _type = 'morning';
   bool _saving = false;
   Map<String, dynamic>? _extracted;
+  late Future<Map<String, dynamic>?> _streakFuture;
 
   static const _questions = {
     'morning': [
@@ -49,9 +52,19 @@ class _CheckinPageState extends State<CheckinPage> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _streakFuture = _loadStreak();
+  }
+
+  @override
   void dispose() {
     _answer.dispose();
     super.dispose();
+  }
+
+  Future<Map<String, dynamic>?> _loadStreak() {
+    return _mcp.getAiCheckinStreak(SupabaseService.currentUserId);
   }
 
   @override
@@ -63,6 +76,13 @@ class _CheckinPageState extends State<CheckinPage> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          FutureBuilder<Map<String, dynamic>?>(
+            future: _streakFuture,
+            builder: (context, snapshot) {
+              return _DailyCheckinStreakCard(streak: snapshot.data);
+            },
+          ),
+          const SizedBox(height: 16),
           BpCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +133,7 @@ class _CheckinPageState extends State<CheckinPage> {
                   icon: _saving
                       ? const SizedBox.square(
                           dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: ExpressiveLoadingIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.auto_awesome),
                   label: const Text('Extract Progress'),
@@ -166,6 +186,7 @@ class _CheckinPageState extends State<CheckinPage> {
         'user_answer': _answer.text.trim(),
         'ai_extracted_data': extracted,
       });
+      final streak = await _mcp.recordAiCheckinStreak(userId);
 
       final progressLog = ProgressEngine.buildDailyProgressLog(
         userId: userId,
@@ -177,9 +198,16 @@ class _CheckinPageState extends State<CheckinPage> {
       await _mcp.saveProgressLog(userId, progressLog);
 
       if (!mounted) return;
-      setState(() => _extracted = extracted);
+      setState(() {
+        _extracted = extracted;
+        _streakFuture = Future.value(streak);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Check-in saved and progress updated.')),
+        SnackBar(
+          content: Text(
+            'Check-in saved. Current streak: ${streak['current_streak']} days.',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
@@ -189,5 +217,72 @@ class _CheckinPageState extends State<CheckinPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+class _DailyCheckinStreakCard extends StatelessWidget {
+  const _DailyCheckinStreakCard({required this.streak});
+
+  final Map<String, dynamic>? streak;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final current = intValue(streak?['current_streak']);
+    final best = intValue(streak?['best_streak']);
+    final last = streak?['last_checkin_date'];
+    final hasStarted = current > 0;
+
+    return BpCard(
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.local_fire_department_outlined,
+              color: colorScheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Daily AI check-in streak',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  hasStarted
+                      ? '$current day${current == 1 ? '' : 's'} current, best $best'
+                      : 'Start your streak with today\'s check-in.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                if (last != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Last check-in: ${compactDate(last)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
