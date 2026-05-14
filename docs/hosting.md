@@ -304,7 +304,7 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENROUTER_API_KEY=...
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_MODEL=openrouter/free
 OPENROUTER_SITE_URL=https://project-bluepill.web.app
 OPENROUTER_APP_NAME=Project BluePill
 ```
@@ -323,7 +323,7 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENROUTER_API_KEY=...
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_MODEL=openrouter/free
 OPENROUTER_SITE_URL=https://project-bluepill.web.app
 OPENROUTER_APP_NAME=Project BluePill
 ```
