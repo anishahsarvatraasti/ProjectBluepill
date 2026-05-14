@@ -32,7 +32,7 @@ Allowed values:
 SUPABASE_URL=https://qhunsphxuzmheduacull.supabase.co
 SUPABASE_ANON_KEY=...
 GOOGLE_OAUTH_CLIENT_ID=...
-FASTAPI_BASE_URL=https://your-worker.onrender.com
+FASTAPI_BASE_URL=https://project-bluepill-worker.onrender.com
 ```
 
 Flutter bundles this file into web and Linux builds as an app asset. Only put client-safe public values here.
@@ -76,8 +76,9 @@ supabase secrets set \
   SUPABASE_URL="https://qhunsphxuzmheduacull.supabase.co" \
   SUPABASE_ANON_KEY="..." \
   SUPABASE_SERVICE_ROLE_KEY="..." \
+  QSTASH_URL="https://qstash-us-east-1.upstash.io" \
   QSTASH_TOKEN="..." \
-  WORKER_BASE_URL="https://your-worker.onrender.com" \
+  WORKER_BASE_URL="https://project-bluepill-worker.onrender.com" \
   WORKER_SHARED_SECRET="..."
 ```
 

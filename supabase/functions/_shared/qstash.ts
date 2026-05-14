@@ -20,8 +20,9 @@ export async function publishToWorker(
     headers["Upstash-Delay"] = `${Math.ceil(options.delaySeconds)}s`;
   }
 
+  const qstashUrl = env.qstashUrl.replace(/\/$/, "");
   const response = await fetch(
-    `https://qstash.upstash.io/v2/publish/${encodeURIComponent(destination)}`,
+    `${qstashUrl}/v2/publish/${encodeURIComponent(destination)}`,
     {
       method: "POST",
       headers,

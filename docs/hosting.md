@@ -278,7 +278,9 @@ No local hosting is needed. Local development can call the worker directly.
 Create an Upstash QStash project, then set the token in Supabase:
 
 ```bash
-supabase secrets set QSTASH_TOKEN="..."
+supabase secrets set \
+  QSTASH_URL="https://qstash-us-east-1.upstash.io" \
+  QSTASH_TOKEN="..."
 ```
 
 QStash targets:

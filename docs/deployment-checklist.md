@@ -32,18 +32,20 @@ Only tracks what is done and what is still pending.
 | Production domain added to Supabase Auth redirects | [x] Done |
 | Native Linux release build completed | [x] Done |
 | Linux release tarball created | [x] Done |
+| FastAPI worker hosted on Render Web Service | [x] Done |
+| Worker environment values added in Render | [x] Done |
+| Upstash QStash token configured | [x] Done |
+| `QSTASH_URL` set to US region in Supabase secrets | [x] Done |
+| `QSTASH_TOKEN` set in Supabase secrets | [x] Done |
+| `WORKER_BASE_URL` set in Supabase secrets | [x] Done |
+| `WORKER_SHARED_SECRET` set in Supabase and Render | [x] Done |
+| Production model provider env values added | [x] Done |
+| Flutter web redeployed with production FastAPI worker URL | [x] Done |
 
 ## Pending
 
 | Item | Status |
 | --- | --- |
-| Host FastAPI worker on Render Web Service | [ ] Pending |
-| Add worker environment values in Render | [ ] Pending |
-| Configure Upstash QStash | [ ] Pending |
-| Set QStash token in Supabase secrets | [ ] Pending |
-| Set `WORKER_BASE_URL` in Supabase secrets | [ ] Pending |
-| Set `WORKER_SHARED_SECRET` in Supabase and Render | [ ] Pending |
-| Add production model provider env values | [ ] Pending |
 | Add production domain to Google OAuth | [ ] Pending |
 | Finish Firebase push notification setup | [ ] Pending |
 | Add native Firebase support if a Linux-capable Firebase plugin is adopted | [ ] Pending |
