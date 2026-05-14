@@ -43,6 +43,8 @@ Flutter App
 
 Flutter is the user interface. Users chat with the agent, manage tasks, approve actions, view calendar suggestions, receive realtime updates, and configure settings.
 
+The production web build is hosted on Firebase Hosting at `https://project-bluepill.web.app`. FlutterFire is configured for the web target through `firebase_core` and `flutter/lib/firebase_options.dart`. The native Linux build currently skips Firebase initialization because the installed official `firebase_core` package does not provide a Linux plugin in this workspace.
+
 Flutter responsibilities:
 
 - Render chat, tasks, calendar suggestions, settings, approvals, and progress states.

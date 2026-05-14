@@ -8,6 +8,8 @@ This file only explains how each part runs locally and how it should run in prod
 
 ### Local
 
+Web:
+
 ```bash
 cd flutter
 flutter run -d web-server --web-hostname localhost --web-port 3000
@@ -15,20 +17,109 @@ flutter run -d web-server --web-hostname localhost --web-port 3000
 
 Use `http://localhost:3000` for local development.
 
+Linux desktop:
+
+```bash
+cd flutter
+flutter run -d linux
+```
+
 ### Production
+
+Firebase Hosting serves the Flutter web build for:
+
+```text
+Project ID: project-bluepill
+Hosting URL: https://project-bluepill.web.app
+```
+
+Build the Flutter web release:
 
 ```bash
 cd flutter
 flutter build web --release
 ```
 
-Deploy the build output:
+The build output is:
 
 ```text
 flutter/build/web
 ```
 
-Use Vercel, Netlify, or Firebase Hosting.
+Deploy from the repo root:
+
+```bash
+firebase deploy --only hosting --project project-bluepill
+```
+
+If `firebase` is not on `PATH`, install the Firebase CLI into a user-local prefix:
+
+```bash
+npm install -g --prefix "$HOME/.local" firebase-tools
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+The repo root [firebase.json](../firebase.json) points Hosting at `flutter/build/web`, keeps Flutter entry assets on `no-cache`, deploys the Flutter `.env` asset, and rewrites deep links to `index.html`.
+
+### FlutterFire
+
+Install the FlutterFire CLI once:
+
+```bash
+dart pub global activate flutterfire_cli
+```
+
+Make sure Dart global executables are on `PATH`:
+
+```bash
+export PATH="$PATH:$HOME/.pub-cache/bin"
+```
+
+Configure Firebase from the Flutter project root:
+
+```bash
+cd flutter
+flutterfire configure --project=project-bluepill
+```
+
+Generated files:
+
+```text
+flutter/lib/firebase_options.dart
+flutter/firebase.json
+```
+
+The app initializes Firebase on web through `firebase_core`. Current official `firebase_core` support in this workspace does not include a Linux plugin, so the native Linux app skips Firebase initialization and uses Supabase for auth and data.
+
+### Linux Release
+
+Build the native Linux release:
+
+```bash
+cd flutter
+flutter build linux --release
+```
+
+Run the bundle:
+
+```bash
+cd flutter/build/linux/x64/release/bundle
+./project_bluepill
+```
+
+Package the bundle:
+
+```bash
+cd flutter
+tar -C build/linux/x64/release -czf build/linux/x64/release/project_bluepill_linux_x64.tar.gz bundle
+```
+
+Output:
+
+```text
+flutter/build/linux/x64/release/bundle/project_bluepill
+flutter/build/linux/x64/release/project_bluepill_linux_x64.tar.gz
+```
 
 ## Supabase Project
 
@@ -169,6 +260,7 @@ Production endpoints:
 
 ```text
 GET  https://your-worker.onrender.com/healthz
+POST https://your-worker.onrender.com/agent/chat
 POST https://your-worker.onrender.com/jobs/agent-run
 POST https://your-worker.onrender.com/jobs/scheduled-job
 ```
@@ -235,10 +327,21 @@ http://localhost:3000
 Add the production frontend domain in Google Cloud OAuth:
 
 ```text
-https://your-frontend-domain
+https://project-bluepill.web.app
 ```
 
-Also add the same frontend URL to Supabase Auth redirect URLs.
+Set the same frontend URL in `flutter/.env` before `flutter build web`:
+
+```text
+AUTH_REDIRECT_ORIGIN=https://project-bluepill.web.app
+```
+
+Also add the same frontend URL to Supabase Auth URL Configuration:
+
+```text
+Site URL: https://project-bluepill.web.app
+Redirect URLs: https://project-bluepill.web.app/**
+```
 
 ## Firebase Cloud Messaging
 
@@ -253,6 +356,7 @@ FIREBASE_PROJECT_ID=...
 FIREBASE_CLIENT_EMAIL=...
 FIREBASE_PRIVATE_KEY=...
 ```
+
 ### Production
 
 Create or use a Firebase project, then add Firebase admin env values to Render:

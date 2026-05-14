@@ -60,6 +60,17 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
       conversationId = data.id as string;
+    } else {
+      const { data, error } = await client
+        .from("agent_conversations")
+        .select("id")
+        .eq("id", conversationId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error || !data) {
+        return errorResponse("Conversation not found.", 404);
+      }
     }
 
     const { data: messageRow, error: messageError } = await client
@@ -75,6 +86,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (messageError) throw messageError;
+
+    await client
+      .from("agent_conversations")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
 
     const { data: run, error: runError } = await client
       .from("agent_runs")

@@ -674,26 +674,24 @@ class AppTheme {
       final pressed = states.contains(WidgetState.pressed);
       final hovered = states.contains(WidgetState.hovered);
 
+      Color backgroundColor;
+      if (disabled) {
+        backgroundColor = colorScheme.onSurface.withValues(alpha: 0.12);
+      } else if (pressed) {
+        backgroundColor = colorScheme.primaryContainer;
+      } else if (hovered) {
+        backgroundColor = colorScheme.primaryContainer.withValues(alpha: 0.85);
+      } else {
+        backgroundColor = colorScheme.primaryContainer;
+      }
+
       return ClipPath.shape(
         shape: _buttonShape,
         child: AnimatedContainer(
           duration: _quickMotion,
           curve: Easing.emphasizedDecelerate,
           decoration: ShapeDecoration(
-            color:
-                disabled ? colorScheme.onSurface.withValues(alpha: 0.12) : null,
-            gradient: disabled
-                ? null
-                : LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primary,
-                      hovered || pressed
-                          ? colorScheme.tertiary
-                          : colorScheme.secondary,
-                    ],
-                  ),
+            color: backgroundColor,
             shape: _buttonShape,
           ),
           child: child,

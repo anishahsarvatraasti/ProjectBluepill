@@ -28,12 +28,16 @@ async def run_bluepill_agent(
     message: str,
     user_context: dict[str, Any],
     memories: list[dict[str, Any]],
+    conversation_history: list[dict[str, Any]] | None = None,
+    attachments: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     settings = get_settings()
     prompt = {
         "message": message,
+        "conversation_history": conversation_history or [],
         "user_context": user_context,
         "memories": memories,
+        "attachments": attachments or [],
     }
 
     if Agent is None or Runner is None:

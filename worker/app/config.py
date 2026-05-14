@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         alias="FIREBASE_CLIENT_EMAIL",
     )
     firebase_private_key: str | None = Field(default=None, alias="FIREBASE_PRIVATE_KEY")
+    cors_allow_origins: str = Field(default="*", alias="CORS_ALLOW_ORIGINS")
 
     model_config = SettingsConfigDict(
         env_file="../server.env",

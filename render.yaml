@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: project-bluepill-worker
+    runtime: python
+    rootDir: worker
+    region: singapore
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.10
+      - key: SUPABASE_URL
+        value: https://qhunsphxuzmheduacull.supabase.co
+      - key: CORS_ALLOW_ORIGINS
+        value: https://project-bluepill.web.app,http://localhost:3000
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WORKER_SHARED_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false

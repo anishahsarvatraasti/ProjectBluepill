@@ -53,9 +53,10 @@ class _ProgressPageState extends State<ProgressPage> {
             tooltip: 'AI weekly summary',
             onPressed: _summarizing ? null : _generateWeeklySummary,
             icon: _summarizing
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
+                ? const ExpressiveLoadingIndicator(
+                    size: 20,
+                    strokeWidth: 2,
+                    semanticsLabel: 'Generating summary',
                   )
                 : const Icon(Icons.auto_awesome),
           ),
@@ -65,7 +66,11 @@ class _ProgressPageState extends State<ProgressPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: ExpressiveLoadingIndicator());
+            return const Center(
+              child: ExpressiveLoadingIndicator(
+                semanticsLabel: 'Loading progress',
+              ),
+            );
           }
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
@@ -79,54 +84,61 @@ class _ProgressPageState extends State<ProgressPage> {
               ? Map<String, dynamic>.from(data['ai_checkin_streak'] as Map)
               : null;
           final feedback = data['feedback'] as List<Map<String, dynamic>>;
-          final checkinStreakDays =
-              intValue(aiCheckinStreak?['current_streak']);
+          final checkinStreakDays = intValue(
+            aiCheckinStreak?['current_streak'],
+          );
           final bestCheckinStreak = intValue(aiCheckinStreak?['best_streak']);
-          final latestScore =
-              progress.isEmpty ? 0 : intValue(progress.last['life_score']);
+          final latestScore = progress.isEmpty
+              ? 0
+              : intValue(progress.last['life_score']);
           final recent = progress.length > 7
               ? progress.sublist(progress.length - 7)
               : progress;
           final weeklyScore = recent.isEmpty
               ? 0
               : (recent
-                          .map((item) => intValue(item['life_score']))
-                          .reduce((a, b) => a + b) /
-                      recent.length)
-                  .round();
+                            .map((item) => intValue(item['life_score']))
+                            .reduce((a, b) => a + b) /
+                        recent.length)
+                    .round();
           final taskRate = tasks.isEmpty
               ? 0
               : (tasks.where((task) => task['status'] == 'completed').length /
-                      tasks.length *
-                      100)
-                  .round();
+                        tasks.length *
+                        100)
+                    .round();
           final habitRate = habits.isEmpty
               ? 0
               : (habits
-                          .map((habit) => doubleValue(habit['completion_rate']))
-                          .reduce((a, b) => a + b) /
-                      habits.length)
-                  .round();
+                            .map(
+                              (habit) => doubleValue(habit['completion_rate']),
+                            )
+                            .reduce((a, b) => a + b) /
+                        habits.length)
+                    .round();
           final focusAvg = recent.isEmpty
               ? 0
               : (recent
-                          .map((item) => intValue(item['focus_score']))
-                          .reduce((a, b) => a + b) /
-                      recent.length)
-                  .round();
+                            .map((item) => intValue(item['focus_score']))
+                            .reduce((a, b) => a + b) /
+                        recent.length)
+                    .round();
           final best = progress.isEmpty
               ? null
-              : progress.reduce((a, b) =>
-                  intValue(a['life_score']) > intValue(b['life_score'])
+              : progress.reduce(
+                  (a, b) =>
+                      intValue(a['life_score']) > intValue(b['life_score'])
                       ? a
-                      : b);
+                      : b,
+                );
           final blocker = _commonBlocker(progress);
           final weeklySummaries = feedback
               .where((item) => item['feedback_type'] == 'weekly_summary')
               .map((item) => item['message'].toString())
               .toList();
-          final weeklySummary =
-              weeklySummaries.isEmpty ? null : weeklySummaries.first;
+          final weeklySummary = weeklySummaries.isEmpty
+              ? null
+              : weeklySummaries.first;
 
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -136,7 +148,9 @@ class _ProgressPageState extends State<ProgressPage> {
                 children: [
                   _MetricCard(title: 'Daily Life Score', value: '$latestScore'),
                   _MetricCard(
-                      title: 'Weekly Life Score', value: '$weeklyScore'),
+                    title: 'Weekly Life Score',
+                    value: '$weeklyScore',
+                  ),
                   _MetricCard(
                     title: 'Check-in Streak',
                     value:
@@ -171,10 +185,9 @@ class _ProgressPageState extends State<ProgressPage> {
                   children: [
                     Text(
                       'Mood and Focus',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(height: 240, child: _FocusChart(progress)),
@@ -195,15 +208,14 @@ class _ProgressPageState extends State<ProgressPage> {
                         Expanded(
                           child: Text(
                             'AI Weekly Summary',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
                         TextButton.icon(
-                          onPressed:
-                              _summarizing ? null : _generateWeeklySummary,
+                          onPressed: _summarizing
+                              ? null
+                              : _generateWeeklySummary,
                           icon: const Icon(Icons.auto_awesome),
                           label: const Text('Generate'),
                         ),
@@ -292,10 +304,9 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             value,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
         ],
       ),

@@ -27,6 +27,20 @@ class SupabaseRestClient:
             rows = response.json()
             return rows[0] if rows else None
 
+    async def get_user(self, jwt: str) -> dict[str, Any] | None:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(
+                f"{self.base_url}/auth/v1/user",
+                headers={
+                    "apikey": self.headers["apikey"],
+                    "Authorization": f"Bearer {jwt}",
+                },
+            )
+            if response.status_code in {401, 403}:
+                return None
+            response.raise_for_status()
+            return response.json()
+
     async def select(
         self,
         table: str,

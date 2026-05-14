@@ -1,8 +1,13 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/app_config.dart';
+import 'firebase_options.dart';
 import 'screens/auth_gate.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
@@ -16,6 +21,8 @@ Future<void> main() async {
     // The app can still open and show setup instructions.
   }
 
+  unawaited(_initializeFirebase());
+
   if (AppConfig.supabaseConfigured) {
     await Supabase.initialize(
       url: AppConfig.supabaseUrl,
@@ -25,6 +32,18 @@ Future<void> main() async {
 
   await ThemeController.instance.load();
   runApp(const ProjectBluePillApp());
+}
+
+Future<void> _initializeFirebase() async {
+  if (!kIsWeb) return;
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 5));
+  } catch (_) {
+    // Firebase features are optional; Supabase remains the app auth/data source.
+  }
 }
 
 class ProjectBluePillApp extends StatelessWidget {

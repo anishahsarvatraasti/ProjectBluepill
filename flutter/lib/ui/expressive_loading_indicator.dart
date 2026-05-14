@@ -1,3 +1,5 @@
+import 'package:expressive_loading_indicator/expressive_loading_indicator.dart'
+    as expressive;
 import 'package:flutter/material.dart';
 
 class ExpressiveLoadingIndicator extends StatelessWidget {
@@ -14,17 +16,16 @@ class ExpressiveLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: size,
-      child: CircularProgressIndicator(
-        semanticsLabel: semanticsLabel,
-        strokeWidth: strokeWidth,
-        strokeCap: StrokeCap.round,
-        trackGap: strokeWidth <= 2 ? 2 : 4,
-        constraints: const BoxConstraints(),
-        // ignore: deprecated_member_use
-        year2023: false,
-      ),
+    final compact = size <= 24 || strokeWidth <= 2;
+    final iconColor = IconTheme.of(context).color;
+    final progressColor = ProgressIndicatorTheme.of(context).color;
+    final color = compact && iconColor != null
+        ? iconColor
+        : progressColor ?? Theme.of(context).colorScheme.primary;
+    return expressive.ExpressiveLoadingIndicator(
+      color: color,
+      constraints: BoxConstraints.tightFor(width: size, height: size),
+      semanticsLabel: semanticsLabel,
     );
   }
 }

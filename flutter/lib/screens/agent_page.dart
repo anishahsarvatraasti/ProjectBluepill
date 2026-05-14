@@ -7,6 +7,7 @@ import 'package:googleapis/calendar/v3.dart' as calendar;
 
 import '../models/model_helpers.dart';
 import '../services/agent_chat_service.dart';
+import '../services/agent_gateway_service.dart';
 import '../services/ai_service.dart';
 import '../services/google_calendar_service.dart';
 import '../services/mcp_context_service.dart';
@@ -16,6 +17,8 @@ import 'checkin_page.dart';
 
 const _maxAttachments = 4;
 const _maxAttachmentBytes = 8 * 1024 * 1024;
+const _agentRunPollInterval = Duration(milliseconds: 1500);
+const _agentRunTimeout = Duration(seconds: 75);
 const _agentWelcomeText =
     'I am Agent. Attach anything useful, ask what you need next, and I will connect it to your stored context.';
 
@@ -39,8 +42,8 @@ class _AgentPageState extends State<AgentPage> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _mcp = McpContextService();
-  final _ai = AiService();
   final _chatStore = AgentChatService();
+  final _gateway = AgentGatewayService();
   final _calendar = GoogleCalendarService();
   final _messages = <_ChatMessage>[];
   final _conversations = <Map<String, dynamic>>[];
@@ -69,7 +72,8 @@ class _AgentPageState extends State<AgentPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canSend = !_sending &&
+    final canSend =
+        !_sending &&
         (_controller.text.trim().isNotEmpty || _attachments.isNotEmpty);
 
     return Scaffold(
@@ -224,10 +228,9 @@ class _AgentPageState extends State<AgentPage> {
           if (_loadingConversation)
             Positioned.fill(
               child: ColoredBox(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surface
-                    .withValues(alpha: 0.62),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: 0.62),
                 child: const Center(child: ExpressiveLoadingIndicator()),
               ),
             ),
@@ -242,10 +245,7 @@ class _AgentPageState extends State<AgentPage> {
   }
 
   _ChatMessage _welcomeMessage() {
-    return const _ChatMessage(
-      role: 'assistant',
-      text: _agentWelcomeText,
-    );
+    return const _ChatMessage(role: 'assistant', text: _agentWelcomeText);
   }
 
   Future<void> _loadConversations() async {
@@ -374,7 +374,6 @@ class _AgentPageState extends State<AgentPage> {
         : text;
     final visibleText = text.isEmpty ? 'Review these attachments.' : text;
     final messageAttachments = List<_AgentInputAttachment>.from(_attachments);
-    final history = _historyForPrompt();
     final userId = SupabaseService.currentUserId;
 
     setState(() {
@@ -393,67 +392,68 @@ class _AgentPageState extends State<AgentPage> {
     _scrollToEnd();
 
     try {
-      Object? conversationId;
-      try {
-        conversationId = await _ensureConversation(userId, visibleText);
-        await _chatStore.saveMessage(
-          userId: userId,
-          conversationId: conversationId,
-          role: 'user',
-          text: visibleText,
-          attachments: [
-            for (final attachment in messageAttachments)
-              attachment.toMetadata(),
-          ],
-        );
-      } catch (error) {
-        _showSnack('Chat history was not saved: $error');
+      if (isCalendarContextRequest(promptText)) {
+        await _refreshCalendarContextForChat(userId);
       }
 
-      final userContext = await _loadContextForChat(
-        userId,
+      final response = await _gateway.createAgentRun(
         message: promptText,
-      );
-      final reply = await _ai.sendAgentMessage(
-        message: promptText,
-        userContext: userContext,
+        conversationId: _activeConversationId,
         attachments: [
-          for (final attachment in messageAttachments)
-            attachment.toAiAttachment(),
+          for (final attachment in messageAttachments) attachment.toMetadata(),
         ],
-        chatHistory: history,
       );
+      final conversationId = response['conversation_id'];
+      final runId = response['agent_run_id'];
+      if (conversationId == null || runId == null) {
+        throw StateError('Agent gateway did not return a run id.');
+      }
 
       if (!mounted) return;
-      setState(
-        () => _messages.add(
-          _ChatMessage(
-            role: 'assistant',
-            text: reply,
-            createdAt: DateTime.now(),
-          ),
-        ),
-      );
-      _scrollToEnd();
-
-      try {
-        if (conversationId != null) {
-          await _chatStore.saveMessage(
-            userId: userId,
-            conversationId: conversationId,
-            role: 'assistant',
-            text: reply,
-          );
-          await _loadConversations();
+      setState(() {
+        _activeConversationId = conversationId;
+        if (_activeTitle == 'New chat') {
+          _activeTitle = _titleFromMessage(visibleText);
         }
-      } catch (_) {
-        // Chat should still succeed if storing the reply fails.
+      });
+      await _loadConversations();
+
+      final responseStatus = response['status']?.toString();
+      final run = _isFinishedRunStatus(responseStatus)
+          ? response
+          : await _waitForAgentRun(runId);
+      if (!mounted) return;
+      final status = run['status']?.toString();
+
+      if (status == 'completed') {
+        await _syncConversationMessages(
+          userId: userId,
+          conversationId: conversationId,
+          fallbackReply: _replyTextFromRun(run),
+        );
+        await _loadConversations();
+      } else if (status == 'failed' || status == 'cancelled') {
+        throw StateError(_agentRunFailureMessage(run));
+      } else {
+        setState(
+          () => _messages.add(
+            const _ChatMessage(
+              role: 'assistant',
+              text:
+                  'Agent is still working on this. Reopen this chat from history in a moment to pick up the reply.',
+            ),
+          ),
+        );
+        _scrollToEnd();
       }
     } catch (error) {
       if (!mounted) return;
       setState(
         () => _messages.add(
-          _ChatMessage(role: 'assistant', text: error.toString()),
+          _ChatMessage(
+            role: 'assistant',
+            text: 'Agent could not reply: ${_friendlyError(error)}',
+          ),
         ),
       );
     } finally {
@@ -461,33 +461,10 @@ class _AgentPageState extends State<AgentPage> {
     }
   }
 
-  Future<Map<String, dynamic>> _loadContextForChat(
-    String userId, {
-    String? message,
-  }) async {
-    try {
-      if (message != null && isCalendarContextRequest(message)) {
-        await _refreshCalendarContextForChat(userId);
-      }
-      return await _mcp.getUserContext(userId);
-    } catch (error) {
-      final detail = error.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
-      _showSnack('Stored data unavailable; sending as normal chat.');
-      return {
-        'stored_context_status': 'unavailable',
-        'stored_context_error':
-            detail.length <= 240 ? detail : '${detail.substring(0, 240)}...',
-      };
-    }
-  }
-
   Future<void> _refreshCalendarContextForChat(String userId) async {
     try {
       if (!_calendarInitialized) {
-        await _calendar.initialize(
-          onAuthChanged: (_, __) {},
-          onError: (_) {},
-        );
+        await _calendar.initialize(onAuthChanged: (_, __) {}, onError: (_) {});
         _calendarInitialized = true;
       }
       final user = _calendar.currentUser;
@@ -498,12 +475,112 @@ class _AgentPageState extends State<AgentPage> {
         userId: userId,
         email: user.email,
         scopes: GoogleCalendarService.calendarScopes,
-        upcomingEvents:
-            events.map(_calendarEventSummary).take(50).toList(growable: false),
+        upcomingEvents: events
+            .map(_calendarEventSummary)
+            .take(50)
+            .toList(growable: false),
       );
     } catch (_) {
       // Chat can still proceed with the most recent stored calendar snapshot.
     }
+  }
+
+  Future<Map<String, dynamic>> _waitForAgentRun(Object runId) async {
+    final timeoutAt = DateTime.now().add(_agentRunTimeout);
+    var run = await _gateway.getAgentRun(runId);
+
+    while (mounted && DateTime.now().isBefore(timeoutAt)) {
+      final status = run['status']?.toString();
+      if (_isFinishedRunStatus(status)) {
+        return run;
+      }
+
+      await Future<void>.delayed(_agentRunPollInterval);
+      run = await _gateway.getAgentRun(runId);
+    }
+
+    return run;
+  }
+
+  bool _isFinishedRunStatus(String? status) {
+    return status == 'completed' || status == 'failed' || status == 'cancelled';
+  }
+
+  Future<void> _syncConversationMessages({
+    required String userId,
+    required Object conversationId,
+    String? fallbackReply,
+  }) async {
+    final rows = await _chatStore.getMessages(
+      userId: userId,
+      conversationId: conversationId,
+    );
+    if (!mounted) return;
+
+    final messages = rows.map(_messageFromRow).toList();
+    final cleanFallback = fallbackReply?.trim();
+    final shouldAppendFallback =
+        cleanFallback != null &&
+        cleanFallback.isNotEmpty &&
+        !messages.any(
+          (message) =>
+              message.role == 'assistant' &&
+              message.text.trim() == cleanFallback,
+        );
+
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(messages);
+      if (_messages.isEmpty) _messages.add(_welcomeMessage());
+      if (shouldAppendFallback) {
+        _messages.add(
+          _ChatMessage(
+            role: 'assistant',
+            text: cleanFallback,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+    });
+    _scrollToEnd();
+  }
+
+  String? _replyTextFromRun(Map<String, dynamic> run) {
+    final result = run['result'];
+    if (result is Map && result['text'] != null) {
+      final text = result['text'].toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  String _agentRunFailureMessage(Map<String, dynamic> run) {
+    final status = run['status']?.toString() ?? 'failed';
+    final error = run['error']?.toString().trim();
+    if (error != null && error.isNotEmpty) {
+      return 'Agent run $status: $error';
+    }
+    return 'Agent run $status before it could reply.';
+  }
+
+  String _friendlyError(Object error) {
+    Object? details;
+    try {
+      details = (error as dynamic).details;
+    } catch (_) {
+      details = null;
+    }
+
+    if (details is Map) {
+      final message = details['error'] ?? details['message'];
+      if (message != null && message.toString().trim().isNotEmpty) {
+        return message.toString();
+      }
+    }
+    if (details is String && details.trim().isNotEmpty) return details;
+
+    return error.toString();
   }
 
   Map<String, dynamic> _calendarEventSummary(calendar.Event event) {
@@ -531,32 +608,6 @@ class _AgentPageState extends State<AgentPage> {
 
   DateTime? _calendarEventEnd(calendar.Event event) {
     return event.end?.dateTime ?? event.end?.date;
-  }
-
-  Future<Object> _ensureConversation(String userId, String firstMessage) async {
-    final existing = _activeConversationId;
-    final title =
-        existing == null ? _titleFromMessage(firstMessage) : _activeTitle;
-    if (existing != null) {
-      await _chatStore.updateConversation(
-        conversationId: existing,
-        title: title,
-      );
-      return existing;
-    }
-
-    final conversation = await _chatStore.createConversation(
-      userId: userId,
-      title: title,
-    );
-    final conversationId = conversation['id'] as Object;
-    if (mounted) {
-      setState(() {
-        _activeConversationId = conversationId;
-        _activeTitle = conversation['title']?.toString() ?? title;
-      });
-    }
-    return conversationId;
   }
 
   String _titleFromMessage(String text) {
@@ -590,27 +641,7 @@ class _AgentPageState extends State<AgentPage> {
     return [
       for (final item in decoded)
         if (item is Map)
-          _AgentInputAttachment.fromMetadata(
-            Map<String, dynamic>.from(item),
-          ),
-    ];
-  }
-
-  List<Map<String, String>> _historyForPrompt() {
-    final prior = _messages.where((message) {
-      final text = message.text.trim();
-      return text.isNotEmpty &&
-          text != _agentWelcomeText &&
-          (message.role == 'user' || message.role == 'assistant');
-    }).toList();
-    final recent =
-        prior.length <= 24 ? prior : prior.sublist(prior.length - 24);
-    return [
-      for (final message in recent)
-        {
-          'role': message.role,
-          'text': message.text,
-        },
+          _AgentInputAttachment.fromMetadata(Map<String, dynamic>.from(item)),
     ];
   }
 
@@ -627,8 +658,9 @@ class _AgentPageState extends State<AgentPage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -726,47 +758,45 @@ class _HistoryDrawer extends StatelessWidget {
               child: loading
                   ? const Center(child: ExpressiveLoadingIndicator())
                   : conversations.isEmpty
-                      ? const _EmptyHistory()
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: conversations.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1, indent: 72),
-                          itemBuilder: (context, index) {
-                            final conversation = conversations[index];
-                            final id = conversation['id'];
-                            final title = conversation['title']?.toString();
-                            final updatedAt = compactDate(
-                              conversation['updated_at'],
-                            );
-                            return ListTile(
-                              selected: id == activeConversationId,
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.support_agent_outlined),
-                              ),
-                              title: Text(
-                                title == null || title.trim().isEmpty
-                                    ? 'Agent chat'
-                                    : title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Text(
-                                updatedAt,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: IconButton(
-                                tooltip: 'Delete chat',
-                                onPressed: () => onDeleteConversation(
-                                  conversation,
-                                ),
-                                icon: const Icon(Icons.delete_outline),
-                              ),
-                              onTap: () => onOpenConversation(conversation),
-                            );
-                          },
-                        ),
+                  ? const _EmptyHistory()
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: conversations.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, indent: 72),
+                      itemBuilder: (context, index) {
+                        final conversation = conversations[index];
+                        final id = conversation['id'];
+                        final title = conversation['title']?.toString();
+                        final updatedAt = compactDate(
+                          conversation['updated_at'],
+                        );
+                        return ListTile(
+                          selected: id == activeConversationId,
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.support_agent_outlined),
+                          ),
+                          title: Text(
+                            title == null || title.trim().isEmpty
+                                ? 'Agent chat'
+                                : title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            updatedAt,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: IconButton(
+                            tooltip: 'Delete chat',
+                            onPressed: () => onDeleteConversation(conversation),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                          onTap: () => onOpenConversation(conversation),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -801,8 +831,8 @@ class _EmptyHistory extends StatelessWidget {
               'Saved Agent conversations will appear here.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -820,10 +850,12 @@ class _ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.role == 'user';
     final colorScheme = Theme.of(context).colorScheme;
-    final bubbleColor =
-        isUser ? colorScheme.primaryContainer : colorScheme.surface;
-    final textColor =
-        isUser ? colorScheme.onPrimaryContainer : colorScheme.onSurface;
+    final bubbleColor = isUser
+        ? colorScheme.primaryContainer
+        : colorScheme.surface;
+    final textColor = isUser
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurface;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -849,10 +881,9 @@ class _ChatBubble extends StatelessWidget {
                   const SizedBox(width: 10),
                   Flexible(
                     child: DefaultTextStyle(
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium!
-                          .copyWith(color: textColor),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.copyWith(color: textColor),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -863,9 +894,7 @@ class _ChatBubble extends StatelessWidget {
                               TimeOfDay.fromDateTime(
                                 message.createdAt!.toLocal(),
                               ).format(context),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
+                              style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
                                     color: textColor.withValues(alpha: 0.72),
                                   ),
@@ -940,10 +969,7 @@ class _ComposerIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: IconButton.filledTonal(
-        onPressed: onPressed,
-        icon: Icon(icon),
-      ),
+      child: IconButton.filledTonal(onPressed: onPressed, icon: Icon(icon)),
     );
   }
 }
@@ -988,21 +1014,8 @@ class _AgentInputAttachment {
 
   int get sizeBytes => storedSizeBytes ?? bytes.length;
 
-  AiAttachment toAiAttachment() {
-    return AiAttachment(
-      name: name,
-      mimeType: mimeType,
-      bytes: bytes,
-      textExcerpt: textExcerpt,
-    );
-  }
-
   Map<String, dynamic> toMetadata() {
-    return {
-      'name': name,
-      'mime_type': mimeType,
-      'size_bytes': sizeBytes,
-    };
+    return {'name': name, 'mime_type': mimeType, 'size_bytes': sizeBytes};
   }
 }
 
@@ -1017,14 +1030,14 @@ List<String>? _allowedExtensions(_AttachmentKind kind) {
   return switch (kind) {
     _AttachmentKind.image => ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'],
     _AttachmentKind.voice => [
-        'mp3',
-        'm4a',
-        'wav',
-        'aac',
-        'ogg',
-        'flac',
-        'webm',
-      ],
+      'mp3',
+      'm4a',
+      'wav',
+      'aac',
+      'ogg',
+      'flac',
+      'webm',
+    ],
     _AttachmentKind.file => null,
   };
 }
@@ -1073,7 +1086,8 @@ String _mimeTypeFor(PlatformFile file, _AttachmentKind kind) {
 
 String? _textExcerpt(String name, String mimeType, Uint8List bytes) {
   final lowerName = name.toLowerCase();
-  final looksText = mimeType.startsWith('text/') ||
+  final looksText =
+      mimeType.startsWith('text/') ||
       mimeType == 'application/json' ||
       mimeType == 'application/xml' ||
       lowerName.endsWith('.md') ||

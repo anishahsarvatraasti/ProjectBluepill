@@ -101,10 +101,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       enabled: AppConfig.supabaseConfigured,
                     ),
                     _StatusRow(
-                      label: 'AI provider',
-                      enabled: AppConfig.aiConfigured,
+                      label: 'Agent backend',
+                      enabled: AppConfig.fastApiConfigured,
                     ),
-                    Text('Provider: ${AppConfig.aiProvider}'),
+                    Text(
+                      AppConfig.fastApiConfigured
+                          ? 'FastAPI: ${AppConfig.fastApiBaseUrl}'
+                          : 'FastAPI: Not configured',
+                    ),
                     const SizedBox(height: 14),
                     OutlinedButton.icon(
                       onPressed: () => SupabaseService.client.auth.signOut(),
@@ -182,7 +186,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       items: const [
                         DropdownMenuItem(value: 'soft', child: Text('Soft')),
                         DropdownMenuItem(
-                            value: 'strict', child: Text('Strict')),
+                          value: 'strict',
+                          child: Text('Strict'),
+                        ),
                         DropdownMenuItem(
                           value: 'friendly',
                           child: Text('Friendly'),
@@ -228,9 +234,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     Text(
                       'Default is Dark. Switch to Light when you want a brighter dashboard.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ValueListenableBuilder<BluePillThemeChoice>(
@@ -266,8 +271,11 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _field(TextEditingController controller, String label,
-      {int lines = 1}) {
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    int lines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -290,10 +298,9 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(width: 10),
         Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
       ],
     );
@@ -303,7 +310,8 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_hydrated || profile == null) return;
     _name.text = profile['name']?.toString() ?? '';
     _locationCity.text = profile['location_city']?.toString() ?? '';
-    _dreamGoal.text = profile['dream_goal']?.toString() ??
+    _dreamGoal.text =
+        profile['dream_goal']?.toString() ??
         profile['main_mission']?.toString() ??
         '';
     _dob = DateTime.tryParse(profile['dob']?.toString() ?? '');
@@ -324,24 +332,27 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _saving = true);
     try {
       final dreamGoal = _dreamGoal.text.trim();
-      await SupabaseService.client.from('users_profile').update({
-        'name': _name.text.trim(),
-        'location_city': _locationCity.text.trim(),
-        'dob': _dob == null ? null : dateKey(_dob!),
-        'education_status': _educationStatus,
-        'dream_goal': dreamGoal,
-        'main_mission': dreamGoal,
-        'skills': _skills,
-        'interests': _interests,
-        'current_role': _role.text.trim(),
-        'yearly_goal': _yearlyGoal.text.trim(),
-        'main_struggle': _struggle.text.trim(),
-        'motivation_style': _motivationStyle,
-      }).eq('user_id', SupabaseService.currentUserId);
+      await SupabaseService.client
+          .from('users_profile')
+          .update({
+            'name': _name.text.trim(),
+            'location_city': _locationCity.text.trim(),
+            'dob': _dob == null ? null : dateKey(_dob!),
+            'education_status': _educationStatus,
+            'dream_goal': dreamGoal,
+            'main_mission': dreamGoal,
+            'skills': _skills,
+            'interests': _interests,
+            'current_role': _role.text.trim(),
+            'yearly_goal': _yearlyGoal.text.trim(),
+            'main_struggle': _struggle.text.trim(),
+            'motivation_style': _motivationStyle,
+          })
+          .eq('user_id', SupabaseService.currentUserId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Settings saved.')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

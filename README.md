@@ -4,13 +4,15 @@ Project BluePill is a Flutter + Supabase life operating system. It connects a us
 
 ## What It Does
 
-- Flutter web app with Supabase Auth.
+- Flutter web app and Linux desktop app with Supabase Auth.
 - Mission, goals, tasks, habits, check-ins, progress, calendar, and settings screens.
 - AI check-ins that extract structured progress from natural language.
 - Daily AI check-in streak tracking with current streak, best streak, and last check-in date.
 - Dashboard and Progress views for life score, focus, completion rates, blockers, habit streaks, and check-in streaks.
 - Agent chat with stored Project BluePill context and attachment metadata.
 - Google Calendar / Tasks browser OAuth integration.
+- Firebase Hosting for the Flutter web build.
+- FlutterFire web configuration through `firebase_core`.
 - Supabase Edge Functions for production agent API entry points.
 - FastAPI worker for queued agent jobs, tool calls, audit logs, and notifications.
 
@@ -37,6 +39,10 @@ Full architecture: [docs/architecture.md](docs/architecture.md)
 flutter/                     Flutter app root
 flutter/lib/                 UI and client-safe app services
 flutter/lib/services/        Supabase, AI, context, calendar, and agent clients
+flutter/lib/firebase_options.dart
+                             Generated FlutterFire web config
+firebase.json                Firebase Hosting config for Flutter web
+.firebaserc                  Firebase project alias
 supabase/schema.sql          Current database schema source
 supabase/migrations/         Supabase migration files
 supabase/functions/          Edge Functions API gateway
@@ -78,6 +84,62 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+Run the native Linux app:
+
+```bash
+flutter run -d linux
+```
+
+Build the native Linux release bundle:
+
+```bash
+flutter build linux --release
+```
+
+Output:
+
+```text
+flutter/build/linux/x64/release/bundle/project_bluepill
+```
+
+## Firebase
+
+The Firebase project is:
+
+```text
+Project ID: project-bluepill
+Hosting URL: https://project-bluepill.web.app
+```
+
+FlutterFire is configured for the Flutter web target and generates:
+
+```text
+flutter/lib/firebase_options.dart
+flutter/firebase.json
+```
+
+Re-run FlutterFire config from the Flutter project root:
+
+```bash
+cd flutter
+flutterfire configure --project=project-bluepill
+```
+
+Current official `firebase_core` support in this workspace does not include a Linux plugin. The Linux app therefore skips Firebase initialization and continues to use Supabase for auth and data.
+
+Deploy the Flutter web build to Firebase Hosting from the repo root:
+
+```bash
+cd flutter
+flutter build web --release
+cd ..
+firebase deploy --only hosting --project project-bluepill
+```
+
+For production Google/Supabase OAuth, set
+`AUTH_REDIRECT_ORIGIN=https://project-bluepill.web.app` in `flutter/.env`
+before building, and add that same URL to Supabase Auth URL Configuration.
 
 ## Supabase
 
@@ -145,11 +207,14 @@ The app updates the streak after saving a check-in and shows it on the Check-In,
 cd flutter
 flutter analyze
 flutter test
+flutter build linux --release
 ```
 
 ## Secrets
 
 Flutter only gets public/client-safe values in `flutter/.env`.
+
+Firebase client config in `flutter/lib/firebase_options.dart` is public client configuration, not a backend secret.
 
 Never put these in Flutter:
 

@@ -19,7 +19,11 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  static const _profileLoadTimeout = Duration(seconds: 12);
+
   int _profileReload = 0;
+  Future<Map<String, dynamic>?>? _profileFuture;
+  String? _profileUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -35,18 +39,25 @@ class _AuthGateState extends State<AuthGate> {
 
         return FutureBuilder<Map<String, dynamic>?>(
           key: ValueKey(_profileReload),
-          future: _loadProfile(user.id),
+          future: _profileFutureFor(user.id),
           builder: (context, profileSnapshot) {
             if (profileSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 body: Center(child: ExpressiveLoadingIndicator()),
               );
             }
+            if (profileSnapshot.hasError) {
+              return _ProfileLoadError(
+                error: profileSnapshot.error!,
+                onRetry: () => _reloadProfile(user.id),
+                onSignOut: _signOut,
+              );
+            }
             final profile = profileSnapshot.data;
             if (_needsOnboarding(profile)) {
               return OnboardingPage(
                 initialProfile: profile,
-                onCompleted: () => setState(() => _profileReload++),
+                onCompleted: () => _reloadProfile(user.id),
               );
             }
             return const MainShell();
@@ -54,6 +65,31 @@ class _AuthGateState extends State<AuthGate> {
         );
       },
     );
+  }
+
+  Future<Map<String, dynamic>?> _profileFutureFor(String userId) {
+    if (_profileUserId != userId || _profileFuture == null) {
+      _profileUserId = userId;
+      _profileFuture = _loadProfile(userId).timeout(_profileLoadTimeout);
+    }
+    return _profileFuture!;
+  }
+
+  void _reloadProfile(String userId) {
+    setState(() {
+      _profileReload++;
+      _profileUserId = userId;
+      _profileFuture = _loadProfile(userId).timeout(_profileLoadTimeout);
+    });
+  }
+
+  Future<void> _signOut() async {
+    await SupabaseService.client.auth.signOut();
+    if (!mounted) return;
+    setState(() {
+      _profileUserId = null;
+      _profileFuture = null;
+    });
   }
 
   Future<Map<String, dynamic>?> _loadProfile(String userId) async {
@@ -80,6 +116,83 @@ class _AuthGateState extends State<AuthGate> {
     }
     return _stringList(profile['skills']).isEmpty ||
         _stringList(profile['interests']).isEmpty;
+  }
+}
+
+class _ProfileLoadError extends StatelessWidget {
+  const _ProfileLoadError({
+    required this.error,
+    required this.onRetry,
+    required this.onSignOut,
+  });
+
+  final Object error;
+  final VoidCallback onRetry;
+  final Future<void> Function() onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final detail = error.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: BpCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.cloud_off_outlined,
+                    color: colorScheme.error,
+                    size: 36,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Could not load your profile',
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    detail.isEmpty
+                        ? 'The profile request did not finish.'
+                        : detail,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: onSignOut,
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Sign out'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

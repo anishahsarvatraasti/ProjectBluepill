@@ -117,22 +117,8 @@ class EmptyState extends StatelessWidget {
             children: [
               DecoratedBox(
                 decoration: ShapeDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primaryContainer,
-                      colorScheme.tertiaryContainer,
-                    ],
-                  ),
+                  color: colorScheme.primaryContainer,
                   shape: iconShape,
-                  shadows: [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
                 child: SizedBox.square(
                   dimension: 60,

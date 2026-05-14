@@ -20,6 +20,18 @@ Only tracks what is done and what is still pending.
 | AI check-in streak migration pushed to Supabase cloud | [x] Done |
 | Worker can run locally | [x] Done |
 | Google OAuth local origin added | [x] Done |
+| Firebase CLI available through user-local install | [x] Done |
+| FlutterFire CLI installed | [x] Done |
+| Firebase project `project-bluepill` configured | [x] Done |
+| FlutterFire web app registered | [x] Done |
+| `flutter/lib/firebase_options.dart` generated | [x] Done |
+| Firebase Hosting config exists | [x] Done |
+| Flutter web production build completed | [x] Done |
+| Flutter web hosted on Firebase Hosting | [x] Done |
+| `AUTH_REDIRECT_ORIGIN` set to production frontend URL before web build | [x] Done |
+| Production domain added to Supabase Auth redirects | [x] Done |
+| Native Linux release build completed | [x] Done |
+| Linux release tarball created | [x] Done |
 
 ## Pending
 
@@ -32,9 +44,7 @@ Only tracks what is done and what is still pending.
 | Set `WORKER_BASE_URL` in Supabase secrets | [ ] Pending |
 | Set `WORKER_SHARED_SECRET` in Supabase and Render | [ ] Pending |
 | Add production model provider env values | [ ] Pending |
-| Build Flutter web for production | [ ] Pending |
-| Host Flutter web in production | [ ] Pending |
 | Add production domain to Google OAuth | [ ] Pending |
-| Add production domain to Supabase Auth redirects | [ ] Pending |
 | Finish Firebase push notification setup | [ ] Pending |
+| Add native Firebase support if a Linux-capable Firebase plugin is adopted | [ ] Pending |
 | Test full production agent flow | [ ] Pending |

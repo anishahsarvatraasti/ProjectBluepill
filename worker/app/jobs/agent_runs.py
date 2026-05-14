@@ -20,6 +20,29 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+async def _load_conversation_history(
+    supabase: SupabaseRestClient,
+    *,
+    user_id: str,
+    conversation_id: str | None,
+) -> list[dict[str, Any]]:
+    if not conversation_id:
+        return []
+
+    rows = await supabase.select(
+        "agent_messages",
+        {
+            "user_id": f"eq.{user_id}",
+            "conversation_id": f"eq.{conversation_id}",
+            "select": "role,text,attachments,created_at",
+            "order": "created_at.desc",
+            "limit": "24",
+        },
+    )
+    rows.reverse()
+    return rows
+
+
 async def process_agent_run(delivery: AgentRunDelivery) -> None:
     supabase = SupabaseRestClient()
     run = await supabase.select_by_id("agent_runs", delivery.agent_run_id)
@@ -44,15 +67,25 @@ async def process_agent_run(delivery: AgentRunDelivery) -> None:
     try:
         input_payload: dict[str, Any] = run.get("input") or {}
         message = str(input_payload.get("message") or "")
+        attachments = input_payload.get("attachments")
+        if not isinstance(attachments, list):
+            attachments = []
+        conversation_id = run.get("conversation_id")
         context = await load_user_context(supabase, delivery.user_id)
+        history = await _load_conversation_history(
+            supabase,
+            user_id=delivery.user_id,
+            conversation_id=conversation_id,
+        )
         memories = await search_memory(supabase, delivery.user_id, message)
         result = await run_bluepill_agent(
             message=message,
             user_context=context,
             memories=memories,
+            conversation_history=history,
+            attachments=attachments,
         )
 
-        conversation_id = run.get("conversation_id")
         if conversation_id:
             await supabase.insert(
                 "agent_messages",
@@ -63,6 +96,11 @@ async def process_agent_run(delivery: AgentRunDelivery) -> None:
                     "text": result["text"],
                     "attachments": [],
                 },
+            )
+            await supabase.update_by_id(
+                "agent_conversations",
+                conversation_id,
+                {"updated_at": _now()},
             )
 
         await supabase.update_by_id(

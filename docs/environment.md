@@ -32,10 +32,42 @@ Allowed values:
 SUPABASE_URL=https://qhunsphxuzmheduacull.supabase.co
 SUPABASE_ANON_KEY=...
 GOOGLE_OAUTH_CLIENT_ID=...
-AI_PROVIDER=...
+FASTAPI_BASE_URL=https://your-worker.onrender.com
+```
+
+Flutter bundles this file into web and Linux builds as an app asset. Only put client-safe public values here.
+
+The app also accepts public build-time fallbacks:
+
+```bash
+flutter build web --release \
+  --dart-define=SUPABASE_URL="https://qhunsphxuzmheduacull.supabase.co" \
+  --dart-define=SUPABASE_ANON_KEY="..." \
+  --dart-define=GOOGLE_OAUTH_CLIENT_ID="..." \
+  --dart-define=AUTH_REDIRECT_ORIGIN="https://project-bluepill.web.app"
 ```
 
 Never put backend secrets in Flutter.
+
+## Firebase Flutter Client Config
+
+Firebase project:
+
+```text
+Project ID: project-bluepill
+Hosting URL: https://project-bluepill.web.app
+```
+
+FlutterFire-generated files:
+
+```text
+flutter/lib/firebase_options.dart
+flutter/firebase.json
+```
+
+`firebase_options.dart` contains public Firebase client config. It is not a service account and does not contain backend secrets.
+
+Current FlutterFire config covers the web target. The native Linux app does not initialize Firebase because the installed official `firebase_core` package does not provide a Linux plugin in this workspace.
 
 ## Supabase Edge Function Secrets
 
@@ -80,7 +112,18 @@ http://localhost:3000
 Production JavaScript origin:
 
 ```text
-https://your-frontend-domain
+https://project-bluepill.web.app
 ```
 
-Also add the production frontend URL to Supabase Auth redirect URLs.
+Set the Flutter web OAuth redirect origin before deploying:
+
+```text
+AUTH_REDIRECT_ORIGIN=https://project-bluepill.web.app
+```
+
+Also add the production frontend URL to Supabase Auth URL Configuration:
+
+```text
+Site URL: https://project-bluepill.web.app
+Redirect URLs: https://project-bluepill.web.app/**
+```

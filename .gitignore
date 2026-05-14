@@ -16,4 +16,6 @@ server.env
 worker/.venv/
 worker/**/__pycache__/
 *.pyc
+.firebase/
+firebase-debug.log
 .DS_Store
