@@ -26,7 +26,7 @@ Use this as the quick index for production URLs, dashboards, consoles, and provi
 | Firebase project overview | https://console.firebase.google.com/project/project-bluepill/overview |
 | Firebase Hosting | https://console.firebase.google.com/project/project-bluepill/hosting/sites |
 | Firebase project settings | https://console.firebase.google.com/project/project-bluepill/settings/general |
-| Google Cloud project | https://console.cloud.google.com/welcome?project=project-bluepill |
+| Google Cloud project | https://console.cloud.google.com/welcome?project=project-bluepill&supportedpurview=project,organizationId,folder |
 | Google OAuth credentials | https://console.cloud.google.com/apis/credentials?project=project-bluepill |
 | Google OAuth consent screen | https://console.cloud.google.com/apis/credentials/consent?project=project-bluepill |
 | Upstash QStash | https://console.upstash.com/qstash |

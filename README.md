@@ -68,7 +68,7 @@ Quick links:
 - GitHub: https://github.com/anishahsarvatraasti/ProjectBluepill
 - Supabase dashboard: https://supabase.com/dashboard/project/qhunsphxuzmheduacull
 - Firebase console: https://console.firebase.google.com/project/project-bluepill/overview
-- Google Cloud console: https://console.cloud.google.com/welcome?project=project-bluepill
+- Google Cloud console: https://console.cloud.google.com/welcome?project=project-bluepill&supportedpurview=project,organizationId,folder
 - Render worker: https://dashboard.render.com/web/srv-d82jkml0lvsc738hb37g
 - QStash console: https://console.upstash.com/qstash
 
