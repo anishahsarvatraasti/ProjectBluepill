@@ -60,215 +60,292 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: ExpressiveLoadingIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text(snapshot.error.toString()));
-          }
-          _hydrate(snapshot.data);
-
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              BpCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _sectionHeader(
-                      context,
-                      icon: Icons.account_circle_outlined,
-                      title: 'Account',
-                    ),
-                    const SizedBox(height: 14),
-                    _AccountRow(
-                      label: 'Email',
-                      value: SupabaseService.currentUser?.email ?? 'Unknown',
-                    ),
-                    _AccountRow(
-                      label: 'User ID',
-                      value: SupabaseService.currentUserId,
-                      mono: true,
-                    ),
-                    const SizedBox(height: 12),
-                    _StatusRow(
-                      label: 'Supabase',
-                      enabled: AppConfig.supabaseConfigured,
-                    ),
-                    _StatusRow(
-                      label: 'Agent backend',
-                      enabled: AppConfig.fastApiConfigured,
-                    ),
-                    Text(
-                      AppConfig.fastApiConfigured
-                          ? 'FastAPI: ${AppConfig.fastApiBaseUrl}'
-                          : 'FastAPI: Not configured',
-                    ),
-                    const SizedBox(height: 14),
-                    OutlinedButton.icon(
-                      onPressed: () => SupabaseService.client.auth.signOut(),
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Sign out'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              BpCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _sectionHeader(
-                      context,
-                      icon: Icons.badge_outlined,
-                      title: 'Details',
-                    ),
-                    const SizedBox(height: 14),
-                    _field(_name, 'Name'),
-                    CityAutocompleteField(controller: _locationCity),
-                    const SizedBox(height: 12),
-                    DatePickerField(
-                      label: 'Date of birth',
-                      value: _dob,
-                      onChanged: (value) => setState(() => _dob = value),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _educationStatus,
-                      decoration: const InputDecoration(
-                        labelText: 'Education',
-                        prefixIcon: Icon(Icons.school_outlined),
-                      ),
-                      items: [
-                        for (final status in educationStatuses)
-                          DropdownMenuItem(
-                            value: status,
-                            child: Text(educationLabel(status)),
-                          ),
-                      ],
-                      onChanged: (value) => setState(
-                        () => _educationStatus = value ?? _educationStatus,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _field(_dreamGoal, 'Dream goal', lines: 3),
-                    const SizedBox(height: 12),
-                    MultiSelectChipsField(
-                      label: 'Skills',
-                      icon: Icons.construction_outlined,
-                      options: skillOptions,
-                      selectedValues: _skills,
-                      onChanged: (values) => setState(() => _skills = values),
-                    ),
-                    const SizedBox(height: 16),
-                    MultiSelectChipsField(
-                      label: 'Interests',
-                      icon: Icons.interests_outlined,
-                      options: interestOptions,
-                      selectedValues: _interests,
-                      onChanged: (values) =>
-                          setState(() => _interests = values),
-                    ),
-                    const SizedBox(height: 16),
-                    _field(_role, 'Current role'),
-                    _field(_yearlyGoal, 'Main goal this year'),
-                    _field(_struggle, 'Main struggle', lines: 2),
-                    DropdownButtonFormField<String>(
-                      initialValue: _motivationStyle,
-                      decoration: const InputDecoration(
-                        labelText: 'Motivation style',
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'soft', child: Text('Soft')),
-                        DropdownMenuItem(
-                          value: 'strict',
-                          child: Text('Strict'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'friendly',
-                          child: Text('Friendly'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'business mentor',
-                          child: Text('Business mentor'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'military discipline',
-                          child: Text('Military discipline'),
-                        ),
-                      ],
-                      onChanged: (value) => setState(
-                        () => _motivationStyle = value ?? _motivationStyle,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    FilledButton.icon(
-                      onPressed: _saving ? null : _save,
-                      icon: _saving
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save_outlined),
-                      label: const Text('Save settings'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              BpCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _sectionHeader(
-                      context,
-                      icon: Icons.palette_outlined,
-                      title: 'Theme',
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Default is Dark. Switch to Light when you want a brighter dashboard.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ValueListenableBuilder<BluePillThemeChoice>(
-                      valueListenable: ThemeController.instance,
-                      builder: (context, selectedTheme, _) {
-                        return SegmentedButton<BluePillThemeChoice>(
-                          segments: const [
-                            ButtonSegment(
-                              value: BluePillThemeChoice.dark,
-                              icon: Icon(Icons.dark_mode_outlined),
-                              label: Text('Dark'),
-                            ),
-                            ButtonSegment(
-                              value: BluePillThemeChoice.light,
-                              icon: Icon(Icons.light_mode_outlined),
-                              label: Text('Light'),
-                            ),
-                          ],
-                          selected: {selectedTheme},
-                          onSelectionChanged: (selection) {
-                            ThemeController.instance.setTheme(selection.single);
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Settings'),
+          bottom: const TabBar(
+            isScrollable: true,
+            tabs: [
+              Tab(icon: Icon(Icons.tune_outlined), text: 'App'),
+              Tab(icon: Icon(Icons.account_circle_outlined), text: 'Account'),
+              Tab(
+                icon: Icon(Icons.person_pin_outlined),
+                text: 'Personalization',
               ),
             ],
-          );
-        },
+          ),
+        ),
+        body: FutureBuilder<Map<String, dynamic>?>(
+          future: _future,
+          builder: (context, snapshot) {
+            final profileLoading =
+                snapshot.connectionState == ConnectionState.waiting;
+            final profileError = snapshot.error;
+            if (!profileLoading && profileError == null) {
+              _hydrate(snapshot.data);
+            }
+
+            return TabBarView(
+              children: [
+                _buildAppSettings(context),
+                _buildAccountSettings(context),
+                if (profileLoading)
+                  const Center(child: ExpressiveLoadingIndicator())
+                else if (profileError != null)
+                  _settingsList([_ErrorCard(message: profileError.toString())])
+                else
+                  _buildPersonalizationSettings(context),
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  Widget _buildAppSettings(BuildContext context) {
+    return _settingsList([
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              context,
+              icon: Icons.palette_outlined,
+              title: 'App Settings',
+            ),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<BluePillThemeChoice>(
+              valueListenable: ThemeController.instance,
+              builder: (context, selectedTheme, _) {
+                return SegmentedButton<BluePillThemeChoice>(
+                  segments: const [
+                    ButtonSegment(
+                      value: BluePillThemeChoice.dark,
+                      icon: Icon(Icons.dark_mode_outlined),
+                      label: Text('Dark'),
+                    ),
+                    ButtonSegment(
+                      value: BluePillThemeChoice.light,
+                      icon: Icon(Icons.light_mode_outlined),
+                      label: Text('Light'),
+                    ),
+                  ],
+                  selected: {selectedTheme},
+                  onSelectionChanged: (selection) {
+                    ThemeController.instance.setTheme(selection.single);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              context,
+              icon: Icons.hub_outlined,
+              title: 'Services',
+            ),
+            const SizedBox(height: 14),
+            _StatusRow(
+              label: 'Supabase',
+              enabled: AppConfig.supabaseConfigured,
+            ),
+            _StatusRow(
+              label: 'Agent backend',
+              enabled: AppConfig.fastApiConfigured,
+            ),
+            _StatusRow(
+              label: 'Google APIs',
+              enabled: AppConfig.googleApisConfigured,
+            ),
+            const SizedBox(height: 8),
+            _AccountRow(
+              label: 'FastAPI',
+              value: AppConfig.fastApiConfigured
+                  ? AppConfig.fastApiBaseUrl
+                  : 'Not configured',
+              mono: AppConfig.fastApiConfigured,
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildAccountSettings(BuildContext context) {
+    return _settingsList([
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              context,
+              icon: Icons.account_circle_outlined,
+              title: 'Account Settings',
+            ),
+            const SizedBox(height: 14),
+            _AccountRow(
+              label: 'Email',
+              value: SupabaseService.currentUser?.email ?? 'Unknown',
+            ),
+            _AccountRow(
+              label: 'User ID',
+              value: SupabaseService.currentUserId,
+              mono: true,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(context, icon: Icons.logout, title: 'Session'),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: () => SupabaseService.client.auth.signOut(),
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign out'),
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildPersonalizationSettings(BuildContext context) {
+    return _settingsList([
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              context,
+              icon: Icons.badge_outlined,
+              title: 'Profile',
+            ),
+            const SizedBox(height: 14),
+            _field(_name, 'Name'),
+            CityAutocompleteField(controller: _locationCity),
+            const SizedBox(height: 12),
+            DatePickerField(
+              label: 'Date of birth',
+              value: _dob,
+              onChanged: (value) => setState(() => _dob = value),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _educationStatus,
+              decoration: const InputDecoration(
+                labelText: 'Education',
+                prefixIcon: Icon(Icons.school_outlined),
+              ),
+              items: [
+                for (final status in educationStatuses)
+                  DropdownMenuItem(
+                    value: status,
+                    child: Text(educationLabel(status)),
+                  ),
+              ],
+              onChanged: (value) =>
+                  setState(() => _educationStatus = value ?? _educationStatus),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(context, icon: Icons.flag_outlined, title: 'Goals'),
+            const SizedBox(height: 14),
+            _field(_dreamGoal, 'Dream goal', lines: 3),
+            _field(_role, 'Current role'),
+            _field(_yearlyGoal, 'Main goal this year'),
+            _field(_struggle, 'Main struggle', lines: 2),
+            DropdownButtonFormField<String>(
+              initialValue: _motivationStyle,
+              decoration: const InputDecoration(
+                labelText: 'Motivation style',
+                prefixIcon: Icon(Icons.psychology_alt_outlined),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'soft', child: Text('Soft')),
+                DropdownMenuItem(value: 'strict', child: Text('Strict')),
+                DropdownMenuItem(value: 'friendly', child: Text('Friendly')),
+                DropdownMenuItem(
+                  value: 'business mentor',
+                  child: Text('Business mentor'),
+                ),
+                DropdownMenuItem(
+                  value: 'military discipline',
+                  child: Text('Military discipline'),
+                ),
+              ],
+              onChanged: (value) =>
+                  setState(() => _motivationStyle = value ?? _motivationStyle),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      BpCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              context,
+              icon: Icons.auto_awesome_outlined,
+              title: 'Personalization',
+            ),
+            const SizedBox(height: 14),
+            MultiSelectChipsField(
+              label: 'Skills',
+              icon: Icons.construction_outlined,
+              options: skillOptions,
+              selectedValues: _skills,
+              onChanged: (values) => setState(() => _skills = values),
+            ),
+            const SizedBox(height: 16),
+            MultiSelectChipsField(
+              label: 'Interests',
+              icon: Icons.interests_outlined,
+              options: interestOptions,
+              selectedValues: _interests,
+              onChanged: (values) => setState(() => _interests = values),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton.icon(
+          onPressed: _saving ? null : _save,
+          icon: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: ExpressiveLoadingIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_outlined),
+          label: const Text('Save settings'),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _settingsList(List<Widget> children) {
+    return ListView(padding: const EdgeInsets.all(20), children: children);
   }
 
   Widget _field(
@@ -430,6 +507,34 @@ class _StatusRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text('$label: ${enabled ? 'configured' : 'not configured'}'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return BpCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ],
       ),
     );
