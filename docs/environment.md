@@ -2,6 +2,8 @@
 
 Environment values are grouped by where they belong. Flutter gets only public client values. Backend secrets stay in Supabase Edge Function secrets or Render.
 
+Dashboard and console links are collected in [project-links.md](project-links.md).
+
 ## Supabase Project
 
 ```text

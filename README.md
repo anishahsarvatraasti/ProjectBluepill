@@ -56,7 +56,23 @@ docs/                        Architecture, hosting, environment, and checklist d
 - [docs/app-theme.md](docs/app-theme.md): Material 3 Expressive theme, brand palette, and UI usage rules.
 - [docs/hosting.md](docs/hosting.md): how each service runs locally and in production.
 - [docs/environment.md](docs/environment.md): public env values and backend secrets.
+- [docs/project-links.md](docs/project-links.md): production URLs, dashboards, consoles, and project IDs.
 - [docs/deployment-checklist.md](docs/deployment-checklist.md): what is done and what is still pending.
+
+## Project Links
+
+Quick links:
+
+- Web app: https://project-bluepill.web.app
+- Worker health: https://project-bluepill-worker.onrender.com/healthz
+- GitHub: https://github.com/anishahsarvatraasti/ProjectBluepill
+- Supabase dashboard: https://supabase.com/dashboard/project/qhunsphxuzmheduacull
+- Firebase console: https://console.firebase.google.com/project/project-bluepill/overview
+- Google Cloud console: https://console.cloud.google.com/welcome?project=project-bluepill
+- Render worker: https://dashboard.render.com/web/srv-d82jkml0lvsc738hb37g
+- QStash console: https://console.upstash.com/qstash
+
+Full dashboard index: [docs/project-links.md](docs/project-links.md)
 
 ## Local App
 

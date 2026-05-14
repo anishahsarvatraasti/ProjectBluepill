@@ -2,6 +2,8 @@
 
 Only tracks what is done and what is still pending.
 
+Production URLs, dashboards, and provider consoles are listed in [project-links.md](project-links.md).
+
 ## Done
 
 | Item | Status |

@@ -4,6 +4,8 @@ Reference: `docs/architecture.md`
 
 This file only explains how each part runs locally and how it should run in production. Status lives in `docs/deployment-checklist.md`.
 
+Dashboard and console links live in [project-links.md](project-links.md).
+
 ## Flutter App
 
 ### Local
@@ -259,10 +261,10 @@ Start command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 Production endpoints:
 
 ```text
-GET  https://your-worker.onrender.com/healthz
-POST https://your-worker.onrender.com/agent/chat
-POST https://your-worker.onrender.com/jobs/agent-run
-POST https://your-worker.onrender.com/jobs/scheduled-job
+GET  https://project-bluepill-worker.onrender.com/healthz
+POST https://project-bluepill-worker.onrender.com/agent/chat
+POST https://project-bluepill-worker.onrender.com/jobs/agent-run
+POST https://project-bluepill-worker.onrender.com/jobs/scheduled-job
 ```
 
 Do not use Render Background Worker because QStash needs public HTTP endpoints.
@@ -286,8 +288,8 @@ supabase secrets set \
 QStash targets:
 
 ```text
-POST https://your-worker.onrender.com/jobs/agent-run
-POST https://your-worker.onrender.com/jobs/scheduled-job
+POST https://project-bluepill-worker.onrender.com/jobs/agent-run
+POST https://project-bluepill-worker.onrender.com/jobs/scheduled-job
 ```
 
 ## OpenAI / Model Provider
