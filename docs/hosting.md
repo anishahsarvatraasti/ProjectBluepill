@@ -297,9 +297,16 @@ POST https://your-worker.onrender.com/jobs/scheduled-job
 Add model provider env values to the local worker environment.
 
 ```text
+AI_PROVIDER=openrouter
 OPENAI_API_KEY=...
+OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENROUTER_API_KEY=...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_SITE_URL=https://project-bluepill.web.app
+OPENROUTER_APP_NAME=Project BluePill
 ```
 
 Keep model keys out of Flutter.
@@ -309,9 +316,16 @@ Keep model keys out of Flutter.
 Add model provider env values in Render.
 
 ```text
+AI_PROVIDER=openrouter
 OPENAI_API_KEY=...
+OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENROUTER_API_KEY=...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_SITE_URL=https://project-bluepill.web.app
+OPENROUTER_APP_NAME=Project BluePill
 ```
 
 ## Google Calendar / Tasks

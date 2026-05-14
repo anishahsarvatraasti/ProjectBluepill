@@ -22,7 +22,7 @@ export async function publishToWorker(
 
   const qstashUrl = env.qstashUrl.replace(/\/$/, "");
   const response = await fetch(
-    `${qstashUrl}/v2/publish/${encodeURIComponent(destination)}`,
+    `${qstashUrl}/v2/publish/${encodeURI(destination)}`,
     {
       method: "POST",
       headers,

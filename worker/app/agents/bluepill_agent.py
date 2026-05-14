@@ -3,9 +3,12 @@ from typing import Any
 from app.config import get_settings
 
 try:
-    from agents import Agent, Runner
+    from agents import Agent, AsyncOpenAI, OpenAIProvider, RunConfig, Runner
 except ImportError:  # pragma: no cover - lets scaffolding run before deps install.
     Agent = None
+    AsyncOpenAI = None
+    OpenAIProvider = None
+    RunConfig = None
     Runner = None
 
 
@@ -21,6 +24,35 @@ mission, profile, progress, weaknesses, tasks, habits, or next action.
 
 Ask for approval before actions that mutate external systems.
 """
+
+
+def _model_runtime(settings: Any) -> tuple[str, Any | None]:
+    provider_name = settings.ai_provider.strip().lower()
+
+    if provider_name == "openrouter":
+        api_key = settings.openrouter_api_key or settings.openai_api_key
+        model = settings.openrouter_model
+        base_url = settings.openrouter_base_url
+        headers = {
+            "HTTP-Referer": settings.openrouter_site_url,
+            "X-Title": settings.openrouter_app_name,
+        }
+    else:
+        api_key = settings.openai_api_key
+        model = settings.openai_model
+        base_url = settings.openai_base_url
+        headers = {}
+
+    if not api_key or AsyncOpenAI is None or OpenAIProvider is None or RunConfig is None:
+        return model, None
+
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        default_headers=headers or None,
+    )
+    provider = OpenAIProvider(openai_client=client, use_responses=False)
+    return model, RunConfig(model_provider=provider)
 
 
 async def run_bluepill_agent(
@@ -47,12 +79,13 @@ async def run_bluepill_agent(
             "raw": {"prompt": prompt},
         }
 
+    model, run_config = _model_runtime(settings)
     agent = Agent(
         name="BluePill Agent",
         instructions=SYSTEM_INSTRUCTIONS,
-        model=settings.openai_model,
+        model=model,
     )
-    result = await Runner.run(agent, str(prompt))
+    result = await Runner.run(agent, str(prompt), run_config=run_config)
 
     return {
         "text": result.final_output,
