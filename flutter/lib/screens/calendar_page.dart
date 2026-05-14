@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:intl/intl.dart';
 
@@ -10,7 +8,6 @@ import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
 import '../ui/expressive_loading_indicator.dart';
-import '../ui/google_calendar_sign_in_button.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -28,7 +25,7 @@ class _CalendarPageState extends State<CalendarPage> {
   final _monthFormat = DateFormat('MMMM yyyy');
   final _selectedDateFormat = DateFormat('EEEE, MMMM d');
 
-  GoogleSignInAccount? _user;
+  String? _accountEmail;
   List<calendar.Event> _events = [];
   DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate = DateTime(
@@ -57,10 +54,10 @@ class _CalendarPageState extends State<CalendarPage> {
   Future<void> _initializeCalendar() async {
     try {
       await _calendar.initialize(
-        onAuthChanged: (user, authorized) async {
+        onAuthChanged: (accountEmail, authorized) async {
           if (!mounted) return;
           setState(() {
-            _user = user;
+            _accountEmail = accountEmail;
             _authorized = authorized;
             _error = null;
           });
@@ -75,7 +72,7 @@ class _CalendarPageState extends State<CalendarPage> {
       );
       if (!mounted) return;
       setState(() {
-        _user = _calendar.currentUser;
+        _accountEmail = _calendar.accountEmail;
         _authorized = _calendar.isAuthorized;
         _initializing = false;
       });
@@ -93,20 +90,15 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Future<void> _connectAndAuthorize() async {
     await _runBusyAction(() async {
-      await _calendar.signInAndAuthorize();
+      await _calendar.connectCalendar();
+      if (!mounted) return;
       setState(() {
-        _user = _calendar.currentUser;
+        _accountEmail = _calendar.accountEmail;
         _authorized = _calendar.isAuthorized;
       });
-      await _loadEvents();
-    });
-  }
-
-  Future<void> _authorizeCalendar() async {
-    await _runBusyAction(() async {
-      await _calendar.authorizeCalendar();
-      setState(() => _authorized = _calendar.isAuthorized);
-      await _loadEvents();
+      if (_calendar.isAuthorized) {
+        await _loadEvents();
+      }
     });
   }
 
@@ -123,6 +115,16 @@ class _CalendarPageState extends State<CalendarPage> {
       });
     } catch (error) {
       if (!mounted) return;
+      if (_calendar.isAuthorizationError(error)) {
+        _calendar.clearAuthorization();
+        setState(() {
+          _authorized = false;
+          _events = [];
+          _error =
+              'Google Calendar needs permission. Connect Google Calendar again.';
+        });
+        return;
+      }
       setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _loadingEvents = false);
@@ -131,14 +133,14 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Future<void> _disconnect() async {
     await _runBusyAction(() async {
-      final email = _user?.email;
+      final email = _accountEmail;
       await _calendar.disconnect();
       await _mcp.markGoogleCalendarDisconnected(
         userId: SupabaseService.currentUserId,
         email: email,
       );
       setState(() {
-        _user = null;
+        _accountEmail = null;
         _authorized = false;
         _events = [];
       });
@@ -155,9 +157,9 @@ class _CalendarPageState extends State<CalendarPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -192,7 +194,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 children: [
                   SectionTitle(
                     title: 'Google Calendar',
-                    subtitle: _user?.email ?? 'Primary calendar',
+                    subtitle: _accountEmail ?? 'Primary calendar',
                     trailing: _authorized
                         ? Wrap(
                             spacing: 8,
@@ -218,17 +220,11 @@ class _CalendarPageState extends State<CalendarPage> {
                   ],
                   if (!AppConfig.googleCalendarConfigured)
                     const _SetupCard()
-                  else if (_user == null)
+                  else if (!_authorized)
                     _ConnectCard(
                       busy: _busy,
+                      email: _accountEmail,
                       onConnect: _connectAndAuthorize,
-                    )
-                  else if (!_authorized)
-                    _AuthorizeCard(
-                      busy: _busy,
-                      email: _user!.email,
-                      onAuthorize: _authorizeCalendar,
-                      onDisconnect: _disconnect,
                     )
                   else ...[
                     if (_loadingEvents) const LinearProgressIndicator(),
@@ -237,8 +233,9 @@ class _CalendarPageState extends State<CalendarPage> {
                       focusedMonth: _focusedMonth,
                       selectedDate: _selectedDate,
                       monthLabel: _monthFormat.format(_focusedMonth),
-                      selectedDateLabel:
-                          _selectedDateFormat.format(_selectedDate),
+                      selectedDateLabel: _selectedDateFormat.format(
+                        _selectedDate,
+                      ),
                       events: _events,
                       eventStart: _eventStart,
                       eventTimeText: _formatEventTime,
@@ -259,12 +256,15 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Future<void> _editEvent([calendar.Event? event]) async {
     final title = TextEditingController(text: event?.summary ?? '');
-    final description =
-        TextEditingController(text: event?.description?.toString() ?? '');
-    final location =
-        TextEditingController(text: event?.location?.toString() ?? '');
+    final description = TextEditingController(
+      text: event?.description?.toString() ?? '',
+    );
+    final location = TextEditingController(
+      text: event?.location?.toString() ?? '',
+    );
     final attendees = TextEditingController(
-      text: event?.attendees
+      text:
+          event?.attendees
               ?.map((attendee) => attendee.email)
               .whereType<String>()
               .join(', ') ??
@@ -352,8 +352,9 @@ class _CalendarPageState extends State<CalendarPage> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed:
-                                  saving ? null : () => pickDateTime(true),
+                              onPressed: saving
+                                  ? null
+                                  : () => pickDateTime(true),
                               icon: const Icon(Icons.play_arrow_outlined),
                               label: Text(_formatDraftDateTime(start)),
                             ),
@@ -361,8 +362,9 @@ class _CalendarPageState extends State<CalendarPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed:
-                                  saving ? null : () => pickDateTime(false),
+                              onPressed: saving
+                                  ? null
+                                  : () => pickDateTime(false),
                               icon: const Icon(Icons.stop_outlined),
                               label: Text(_formatDraftDateTime(end)),
                             ),
@@ -372,8 +374,9 @@ class _CalendarPageState extends State<CalendarPage> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: location,
-                        decoration:
-                            const InputDecoration(labelText: 'Location'),
+                        decoration: const InputDecoration(
+                          labelText: 'Location',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -388,8 +391,9 @@ class _CalendarPageState extends State<CalendarPage> {
                         controller: description,
                         minLines: 3,
                         maxLines: 5,
-                        decoration:
-                            const InputDecoration(labelText: 'Description'),
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
                       ),
                     ],
                   ),
@@ -404,8 +408,9 @@ class _CalendarPageState extends State<CalendarPage> {
                   onPressed: saving
                       ? null
                       : () async {
-                          final parsedAttendees =
-                              _parseAttendees(attendees.text);
+                          final parsedAttendees = _parseAttendees(
+                            attendees.text,
+                          );
                           if (title.text.trim().isEmpty) {
                             setDialogState(
                               () => errorText = 'Event title is required.',
@@ -568,7 +573,11 @@ class _CalendarPageState extends State<CalendarPage> {
       return _nextWholeHour();
     }
     return DateTime(
-        _selectedDate.year, _selectedDate.month, _selectedDate.day, 9);
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      9,
+    );
   }
 
   bool _sameDate(DateTime a, DateTime b) {
@@ -585,12 +594,12 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Future<void> _saveCalendarContext(List<calendar.Event> events) async {
-    final user = _calendar.currentUser;
-    if (user == null || !_calendar.isAuthorized) return;
+    final email = _calendar.accountEmail?.trim();
+    if (email == null || email.isEmpty || !_calendar.isAuthorized) return;
 
     await _mcp.saveGoogleCalendarConnection(
       userId: SupabaseService.currentUserId,
-      email: user.email,
+      email: email,
       scopes: GoogleCalendarService.calendarScopes,
       upcomingEvents: events.map(_eventSummary).toList(growable: false),
     );
@@ -647,14 +656,17 @@ class _SetupCard extends StatelessWidget {
 class _ConnectCard extends StatelessWidget {
   const _ConnectCard({
     required this.busy,
+    required this.email,
     required this.onConnect,
   });
 
   final bool busy;
+  final String? email;
   final VoidCallback onConnect;
 
   @override
   Widget build(BuildContext context) {
+    final linkedEmail = email?.trim();
     return BpCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,66 +682,25 @@ class _ConnectCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          if (kIsWeb)
-            googleCalendarSignInButton(onPressed: onConnect)
-          else
-            FilledButton.icon(
-              onPressed: busy ? null : onConnect,
-              icon: busy
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.event_available_outlined),
-              label: const Text('Connect Google Calendar'),
+          if (linkedEmail != null && linkedEmail.isNotEmpty) ...[
+            Text(
+              linkedEmail,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AuthorizeCard extends StatelessWidget {
-  const _AuthorizeCard({
-    required this.busy,
-    required this.email,
-    required this.onAuthorize,
-    required this.onDisconnect,
-  });
-
-  final bool busy;
-  final String email;
-  final VoidCallback onAuthorize;
-  final VoidCallback onDisconnect;
-
-  @override
-  Widget build(BuildContext context) {
-    return BpCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(email, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: busy ? null : onAuthorize,
-                icon: busy
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.verified_user_outlined),
-                label: const Text('Allow calendar access'),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy ? null : onDisconnect,
-                icon: const Icon(Icons.link_off),
-                label: const Text('Disconnect'),
-              ),
-            ],
+            const SizedBox(height: 14),
+          ],
+          FilledButton.icon(
+            onPressed: busy ? null : onConnect,
+            icon: busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.event_available_outlined),
+            label: const Text('Connect Google Calendar'),
           ),
         ],
       ),
@@ -748,10 +719,7 @@ class _ErrorCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.error,
-          ),
+          Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -803,16 +771,16 @@ class _CalendarWorkspace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedEvents = events.where((event) {
-      final start = eventStart(event);
-      return start != null && _sameDay(start, selectedDate);
-    }).toList()
-      ..sort((a, b) {
-        final aStart = eventStart(a);
-        final bStart = eventStart(b);
-        if (aStart == null || bStart == null) return 0;
-        return aStart.compareTo(bStart);
-      });
+    final selectedEvents =
+        events.where((event) {
+          final start = eventStart(event);
+          return start != null && _sameDay(start, selectedDate);
+        }).toList()..sort((a, b) {
+          final aStart = eventStart(a);
+          final bStart = eventStart(b);
+          if (aStart == null || bStart == null) return 0;
+          return aStart.compareTo(bStart);
+        });
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -839,11 +807,7 @@ class _CalendarWorkspace extends StatelessWidget {
 
         if (!wide) {
           return Column(
-            children: [
-              calendarView,
-              const SizedBox(height: 16),
-              agenda,
-            ],
+            children: [calendarView, const SizedBox(height: 16), agenda],
           );
         }
 
@@ -880,7 +844,7 @@ class _CalendarMonthView extends StatelessWidget {
     'Wed',
     'Thu',
     'Fri',
-    'Sat'
+    'Sat',
   ];
 
   final DateTime focusedMonth;
@@ -919,16 +883,12 @@ class _CalendarMonthView extends StatelessWidget {
                   monthLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
-              OutlinedButton(
-                onPressed: onToday,
-                child: const Text('Today'),
-              ),
+              OutlinedButton(onPressed: onToday, child: const Text('Today')),
             ],
           ),
           const SizedBox(height: 12),
@@ -943,9 +903,9 @@ class _CalendarMonthView extends StatelessWidget {
                   child: Text(
                     day,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
             ],
@@ -1053,9 +1013,10 @@ class _CalendarDayCell extends StatelessWidget {
                         color: today
                             ? colorScheme.onPrimary
                             : inFocusedMonth
-                                ? colorScheme.onSurface
-                                : colorScheme.onSurfaceVariant
-                                    .withValues(alpha: 0.58),
+                            ? colorScheme.onSurface
+                            : colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.58,
+                              ),
                         fontWeight: today || selected
                             ? FontWeight.w900
                             : FontWeight.w700,
@@ -1075,9 +1036,9 @@ class _CalendarDayCell extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
               ],
             ),
@@ -1108,9 +1069,9 @@ class _EventPill extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colorScheme.primary,
-              fontWeight: FontWeight.w800,
-            ),
+          color: colorScheme.primary,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -1147,10 +1108,9 @@ class _SelectedDayAgenda extends StatelessWidget {
                   selectedDateLabel,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               IconButton.filled(

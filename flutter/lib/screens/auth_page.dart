@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
+import '../services/google_api_auth_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
 import '../ui/expressive_loading_indicator.dart';
@@ -196,6 +197,8 @@ class _AuthPageState extends State<AuthPage> {
       await SupabaseService.client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: AppConfig.authRedirectUrl(Uri.base),
+        scopes: GoogleApiAuthService.supabaseGoogleCalendarScopes,
+        queryParams: GoogleApiAuthService.googleOAuthQueryParams,
       );
     } catch (error) {
       if (!mounted) return;

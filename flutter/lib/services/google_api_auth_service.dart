@@ -6,6 +6,15 @@ import '../config/app_config.dart';
 class GoogleApiAuthService {
   GoogleApiAuthService._();
 
+  static const calendarEventsScope =
+      'https://www.googleapis.com/auth/calendar.events';
+  static const supabaseGoogleCalendarScopes =
+      'openid email profile $calendarEventsScope';
+  static const googleOAuthQueryParams = {
+    'access_type': 'offline',
+    'include_granted_scopes': 'true',
+  };
+
   static final GoogleSignIn signIn = GoogleSignIn.instance;
   static Future<void>? _initializeFuture;
 

@@ -467,13 +467,13 @@ class _AgentPageState extends State<AgentPage> {
         await _calendar.initialize(onAuthChanged: (_, __) {}, onError: (_) {});
         _calendarInitialized = true;
       }
-      final user = _calendar.currentUser;
-      if (user == null || !_calendar.isAuthorized) return;
+      final email = _calendar.accountEmail?.trim();
+      if (email == null || email.isEmpty || !_calendar.isAuthorized) return;
 
       final events = await _calendar.listUpcomingEvents();
       await _mcp.saveGoogleCalendarConnection(
         userId: userId,
-        email: user.email,
+        email: email,
         scopes: GoogleCalendarService.calendarScopes,
         upcomingEvents: events
             .map(_calendarEventSummary)
