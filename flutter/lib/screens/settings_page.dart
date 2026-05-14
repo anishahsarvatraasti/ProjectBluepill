@@ -66,13 +66,15 @@ class _SettingsPageState extends State<SettingsPage> {
         appBar: AppBar(
           title: const Text('Settings'),
           bottom: const TabBar(
-            isScrollable: true,
             tabs: [
-              Tab(icon: Icon(Icons.tune_outlined), text: 'App'),
-              Tab(icon: Icon(Icons.account_circle_outlined), text: 'Account'),
+              Tab(icon: Icon(Icons.tune_outlined), child: _TabLabel('App')),
+              Tab(
+                icon: Icon(Icons.account_circle_outlined),
+                child: _TabLabel('Account'),
+              ),
               Tab(
                 icon: Icon(Icons.person_pin_outlined),
-                text: 'Personalization',
+                child: _TabLabel('Personalization'),
               ),
             ],
           ),
@@ -485,6 +487,19 @@ class _AccountRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TabLabel extends StatelessWidget {
+  const _TabLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: FittedBox(fit: BoxFit.scaleDown, child: Text(text, maxLines: 1)),
     );
   }
 }
