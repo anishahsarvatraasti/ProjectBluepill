@@ -303,7 +303,6 @@ AI_PROVIDER=openrouter
 OPENAI_API_KEY=...
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENROUTER_API_KEY=...
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_MODEL=openrouter/free
@@ -322,7 +321,6 @@ AI_PROVIDER=openrouter
 OPENAI_API_KEY=...
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENROUTER_API_KEY=...
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_MODEL=openrouter/free
@@ -359,28 +357,4 @@ Also add the same frontend URL to Supabase Auth URL Configuration:
 ```text
 Site URL: https://project-bluepill.web.app
 Redirect URLs: https://project-bluepill.web.app/**
-```
-
-## Firebase Cloud Messaging
-
-### Local
-
-Configure Firebase client setup if push notifications are enabled.
-
-Configure worker Firebase env if backend notifications are enabled:
-
-```text
-FIREBASE_PROJECT_ID=...
-FIREBASE_CLIENT_EMAIL=...
-FIREBASE_PRIVATE_KEY=...
-```
-
-### Production
-
-Create or use a Firebase project, then add Firebase admin env values to Render:
-
-```text
-FIREBASE_PROJECT_ID=...
-FIREBASE_CLIENT_EMAIL=...
-FIREBASE_PRIVATE_KEY=...
 ```

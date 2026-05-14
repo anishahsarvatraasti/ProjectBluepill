@@ -15,10 +15,6 @@ class Settings(BaseSettings):
         alias="OPENAI_BASE_URL",
     )
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
-    openai_embedding_model: str = Field(
-        default="text-embedding-3-small",
-        alias="OPENAI_EMBEDDING_MODEL",
-    )
     openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
     openrouter_model: str = Field(
         default="openai/gpt-4o-mini",
@@ -36,12 +32,6 @@ class Settings(BaseSettings):
         default="Project BluePill",
         alias="OPENROUTER_APP_NAME",
     )
-    firebase_project_id: str | None = Field(default=None, alias="FIREBASE_PROJECT_ID")
-    firebase_client_email: str | None = Field(
-        default=None,
-        alias="FIREBASE_CLIENT_EMAIL",
-    )
-    firebase_private_key: str | None = Field(default=None, alias="FIREBASE_PRIVATE_KEY")
     cors_allow_origins: str = Field(default="*", alias="CORS_ALLOW_ORIGINS")
 
     model_config = SettingsConfigDict(

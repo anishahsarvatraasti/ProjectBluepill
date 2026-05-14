@@ -2,8 +2,6 @@ import { createUserClient } from "./supabase.ts";
 
 export type AuthenticatedUser = {
   id: string;
-  email?: string;
-  jwt: string;
 };
 
 export async function requireUser(req: Request): Promise<AuthenticatedUser> {
@@ -21,7 +19,5 @@ export async function requireUser(req: Request): Promise<AuthenticatedUser> {
 
   return {
     id: data.user.id,
-    email: data.user.email ?? undefined,
-    jwt: token,
   };
 }

@@ -29,4 +29,4 @@ Use `server.env.example` as the source for required environment variables.
 - `app/jobs/`: job execution handlers.
 - `app/agents/`: OpenAI Agents SDK orchestration.
 - `app/services/`: Supabase, context, and audit helpers.
-- `app/tools/`: tool adapters for Postgres, memory, Storage, Google Calendar, Google Tasks, FCM, and future MCP.
+- `app/tools/`: active agent helper tools. Current code keeps memory search only; external write tools should be added when they are wired into the agent runtime.

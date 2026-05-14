@@ -27,7 +27,6 @@ class GoogleCalendarService {
   google_auth.AuthClient? _authClient;
   CalendarApi? _calendarApi;
 
-  GoogleSignInAccount? get currentUser => _currentUser;
   String? get accountEmail => _accountEmail ?? _currentUser?.email;
 
   bool get isAuthorized => _calendarApi != null;

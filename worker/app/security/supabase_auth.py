@@ -8,7 +8,6 @@ from app.services.supabase import SupabaseRestClient
 @dataclass(frozen=True)
 class AuthenticatedUser:
     id: str
-    email: str | None = None
 
 
 async def verify_supabase_user(
@@ -29,7 +28,4 @@ async def verify_supabase_user(
             detail="Invalid Supabase user token.",
         )
 
-    return AuthenticatedUser(
-        id=str(user["id"]),
-        email=user.get("email"),
-    )
+    return AuthenticatedUser(id=str(user["id"]))

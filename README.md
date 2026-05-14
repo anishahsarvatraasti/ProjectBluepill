@@ -240,7 +240,6 @@ QSTASH_TOKEN
 WORKER_SHARED_SECRET
 OPENAI_API_KEY
 OPENROUTER_API_KEY
-FIREBASE_PRIVATE_KEY
 ```
 
 Use [docs/environment.md](docs/environment.md) for where each value belongs.
