@@ -41,6 +41,7 @@ Only tracks what is done and what is still pending.
 | `WORKER_SHARED_SECRET` set in Supabase and Render | [x] Done |
 | Production model provider env values added | [x] Done |
 | Flutter web redeployed with production FastAPI worker URL | [x] Done |
+| Full production agent flow tested | [x] Done |
 
 ## Pending
 
@@ -49,4 +50,3 @@ Only tracks what is done and what is still pending.
 | Add production domain to Google OAuth | [ ] Pending |
 | Finish Firebase push notification setup | [ ] Pending |
 | Add native Firebase support if a Linux-capable Firebase plugin is adopted | [ ] Pending |
-| Test full production agent flow | [ ] Pending |
