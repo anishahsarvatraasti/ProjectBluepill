@@ -205,6 +205,25 @@ class AiService {
     );
   }
 
+  Future<List<String>> generateMissionCheckpoints(
+    Map<String, dynamic> mission,
+    Map<String, dynamic> userContext,
+  ) async {
+    final title = mission['title']?.toString().trim() ?? '';
+    final description = mission['description']?.toString().trim() ?? '';
+    final source = title.isEmpty ? description : title;
+    final cleanTitle = source.isEmpty ? 'this mission' : source;
+    final verbs = _checkpointVerbs(cleanTitle);
+
+    return [
+      '${verbs[0]} the clear outcome for $cleanTitle',
+      '${verbs[1]} the first repeatable system',
+      '${verbs[2]} one visible proof of progress',
+      '${verbs[3]} feedback and remove the biggest blocker',
+      '${verbs[4]} the next milestone from real results',
+    ];
+  }
+
   Future<String> sendMentorMessage(
     String message,
     Map<String, dynamic> userContext,
@@ -247,6 +266,7 @@ class AiService {
       message,
       hasAttachments: attachments.isNotEmpty,
     );
+    if (usePersonalContext) return fallback;
     return _agentFallback(
       message: message,
       attachments: attachments,
@@ -351,6 +371,26 @@ class AiService {
       return 'I could not reach the AI backend for "$prompt".$attachmentNote';
     }
     return 'I could not reach the AI backend for "$prompt". As a local Agent fallback, pick one mission-linked task, shrink it to a 15-minute action, then complete a short check-in so your next answer can use fresher context.$attachmentNote';
+  }
+
+  List<String> _checkpointVerbs(String missionTitle) {
+    final lower = missionTitle.toLowerCase();
+    if (lower.contains('fitness') ||
+        lower.contains('health') ||
+        lower.contains('body')) {
+      return ['Define', 'Build', 'Complete', 'Review', 'Raise'];
+    }
+    if (lower.contains('business') ||
+        lower.contains('startup') ||
+        lower.contains('company')) {
+      return ['Define', 'Validate', 'Ship', 'Collect', 'Scale'];
+    }
+    if (lower.contains('learn') ||
+        lower.contains('study') ||
+        lower.contains('skill')) {
+      return ['Define', 'Practice', 'Publish', 'Review', 'Advance'];
+    }
+    return ['Define', 'Build', 'Finish', 'Review', 'Set'];
   }
 
   String? _localGeneralAnswer(String message) {
