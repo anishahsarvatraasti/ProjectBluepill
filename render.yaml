@@ -30,6 +30,14 @@ services:
         value: https://project-bluepill.web.app
       - key: OPENROUTER_APP_NAME
         value: Project BluePill
+      - key: CRON_SCHEDULER_ENABLED
+        value: true
+      - key: CRON_SCHEDULER_INTERVAL_SECONDS
+        value: 30
+      - key: CRON_SCHEDULER_BATCH_SIZE
+        value: 10
+      - key: CRON_SCHEDULER_LOCK_TTL_SECONDS
+        value: 600
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: WORKER_SHARED_SECRET

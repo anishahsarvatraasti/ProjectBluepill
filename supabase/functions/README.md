@@ -6,6 +6,7 @@ This directory is the API gateway layer from `docs/architecture.md`.
 
 - `agent-chat`: validates the user JWT, rate-limits, creates `agent_runs`, saves the user message, and enqueues QStash.
 - `schedule-job`: validates the user JWT, creates `scheduled_jobs`, and publishes delayed work to QStash.
+- Recurring cron jobs are handled by the FastAPI worker through `/cron/jobs` and the `cron_jobs` / `cron_job_executions` tables, not by an Edge Function.
 - `approve-action`: records user approval/rejection and wakes the worker when an approved run can continue.
 
 ## Shared Modules

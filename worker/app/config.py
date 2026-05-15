@@ -33,6 +33,22 @@ class Settings(BaseSettings):
         alias="OPENROUTER_APP_NAME",
     )
     cors_allow_origins: str = Field(default="*", alias="CORS_ALLOW_ORIGINS")
+    cron_scheduler_enabled: bool = Field(
+        default=True,
+        alias="CRON_SCHEDULER_ENABLED",
+    )
+    cron_scheduler_interval_seconds: int = Field(
+        default=30,
+        alias="CRON_SCHEDULER_INTERVAL_SECONDS",
+    )
+    cron_scheduler_batch_size: int = Field(
+        default=10,
+        alias="CRON_SCHEDULER_BATCH_SIZE",
+    )
+    cron_scheduler_lock_ttl_seconds: int = Field(
+        default=600,
+        alias="CRON_SCHEDULER_LOCK_TTL_SECONDS",
+    )
 
     model_config = SettingsConfigDict(
         env_file="../server.env",

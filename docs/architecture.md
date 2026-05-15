@@ -150,6 +150,12 @@ These records allow Flutter, support tools, and backend logs to answer:
 - What tools did it call?
 - Did it fail, and why?
 
+Recurring jobs are represented by `cron_jobs` and `cron_job_executions`.
+`cron_jobs` stores the definition: `name`, cron `schedule`, whitelisted `task`,
+JSON `payload`, enabled state, retry/timeout controls, `last_run_at`, and
+`next_run_at`. `cron_job_executions` stores each run's status, attempts, logs,
+result, error, timing, and any linked `agent_run_id`.
+
 ## Upstash QStash
 
 QStash is the queue and scheduling layer. It delivers jobs to the FastAPI worker reliably and prevents the Edge Function from waiting while the agent works.
@@ -172,6 +178,7 @@ FastAPI responsibilities:
 
 - Verify QStash signatures or shared worker secrets.
 - Load `agent_runs` or `scheduled_jobs`.
+- Poll due `cron_jobs`, claim them atomically, execute whitelisted tasks, and record execution logs.
 - Load user context from Supabase Postgres and pgvector memory.
 - Run the OpenAI Agents SDK.
 - Execute approved tool calls.
