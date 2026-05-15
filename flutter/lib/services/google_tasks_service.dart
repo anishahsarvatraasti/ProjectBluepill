@@ -155,7 +155,10 @@ class GoogleTasksService {
     );
   }
 
-  Future<List<google_tasks.Task>> listTasks(String taskListId) async {
+  Future<List<google_tasks.Task>> listTasks(
+    String taskListId, {
+    bool includeDeleted = false,
+  }) async {
     final api = _requireApi();
     final tasks = <google_tasks.Task>[];
     String? pageToken;
@@ -165,13 +168,15 @@ class GoogleTasksService {
         maxResults: 100,
         pageToken: pageToken,
         showCompleted: true,
-        showDeleted: false,
+        showDeleted: includeDeleted,
         showHidden: true,
       );
       tasks.addAll(page.items ?? []);
       pageToken = page.nextPageToken;
     } while (pageToken != null);
-    return tasks.where((task) => task.deleted != true).toList(growable: false);
+    return includeDeleted
+        ? tasks
+        : tasks.where((task) => task.deleted != true).toList(growable: false);
   }
 
   Future<google_tasks.Task> createTask(

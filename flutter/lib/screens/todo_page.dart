@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:googleapis/tasks/v1.dart' as google_tasks;
 
@@ -17,24 +19,41 @@ class TodoPage extends StatefulWidget {
   State<TodoPage> createState() => _TodoPageState();
 }
 
-class _TodoPageState extends State<TodoPage> {
+class _TodoPageState extends State<TodoPage> with WidgetsBindingObserver {
+  static const _googleTasksAutoSyncInterval = Duration(minutes: 5);
+
   final _mcp = McpContextService();
   final _ai = AiService();
   final _googleTasks = GoogleTasksService();
   late Future<List<Map<String, dynamic>>> _future;
   List<Map<String, dynamic>>? _orderedTasks;
   bool _ordering = false;
+  bool _googleTasksAuthorized = false;
+  bool _syncingGoogleTasks = false;
+  bool _pendingGoogleTasksSync = false;
+  Timer? _googleTasksAutoSyncTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = _load();
+    unawaited(_initializeGoogleTasksAutoSync());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _googleTasksAutoSyncTimer?.cancel();
     _googleTasks.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _refresh();
+    unawaited(_autoSyncGoogleTasks());
   }
 
   Future<List<Map<String, dynamic>>> _load() {
@@ -69,11 +88,14 @@ class _TodoPageState extends State<TodoPage> {
             onPressed: () => _editTask(),
             icon: const Icon(Icons.add),
           ),
-          IconButton(
-            tooltip: 'Sync Google Tasks',
-            onPressed: _openGoogleTasksSync,
-            icon: const Icon(Icons.sync),
-          ),
+          if (_syncingGoogleTasks)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox.square(
+                dimension: 18,
+                child: ExpressiveLoadingIndicator(strokeWidth: 2),
+              ),
+            ),
         ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -166,21 +188,86 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-  Future<void> _openGoogleTasksSync() async {
+  Future<void> _initializeGoogleTasksAutoSync() async {
+    if (!AppConfig.googleApisConfigured) return;
     try {
-      final tasks = await _future;
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => _GoogleTasksSyncDialog(
-          service: _googleTasks,
-          localTasks: tasks,
-          onSync: _syncGoogleTasks,
-          onSynced: _refresh,
-        ),
+      await _googleTasks.initialize(
+        onAuthChanged: (accountEmail, authorized) {
+          if (!mounted) return;
+          setState(() => _googleTasksAuthorized = authorized);
+          if (authorized) {
+            _startGoogleTasksAutoSyncTimer();
+            unawaited(_autoSyncGoogleTasks());
+          } else {
+            _stopGoogleTasksAutoSyncTimer();
+          }
+        },
+        onError: (error) {
+          if (!mounted) return;
+          setState(() => _googleTasksAuthorized = false);
+          _stopGoogleTasksAutoSyncTimer();
+        },
       );
+      if (!mounted) return;
+      setState(() => _googleTasksAuthorized = _googleTasks.isAuthorized);
+      if (_googleTasks.isAuthorized) {
+        _startGoogleTasksAutoSyncTimer();
+        unawaited(_autoSyncGoogleTasks());
+      }
     } catch (error) {
-      _showError('Could not open Google Tasks sync: $error');
+      if (!mounted) return;
+      setState(() => _googleTasksAuthorized = false);
+      _stopGoogleTasksAutoSyncTimer();
+    }
+  }
+
+  void _startGoogleTasksAutoSyncTimer() {
+    _googleTasksAutoSyncTimer ??= Timer.periodic(
+      _googleTasksAutoSyncInterval,
+      (_) => unawaited(_autoSyncGoogleTasks()),
+    );
+  }
+
+  void _stopGoogleTasksAutoSyncTimer() {
+    _googleTasksAutoSyncTimer?.cancel();
+    _googleTasksAutoSyncTimer = null;
+  }
+
+  Future<void> _autoSyncGoogleTasks() async {
+    if (!mounted || !_googleTasksAuthorized || !_googleTasks.isAuthorized) {
+      return;
+    }
+    if (_syncingGoogleTasks) {
+      _pendingGoogleTasksSync = true;
+      return;
+    }
+
+    setState(() => _syncingGoogleTasks = true);
+    try {
+      final tasks = await _load();
+      await _syncGoogleTasks(tasks);
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+        _orderedTasks = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      if (_googleTasks.isAuthorizationError(error)) {
+        _googleTasks.clearAuthorization();
+        _stopGoogleTasksAutoSyncTimer();
+        setState(() => _googleTasksAuthorized = false);
+      } else {
+        _showError('Could not sync Google Tasks: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _syncingGoogleTasks = false);
+        if (_pendingGoogleTasksSync) {
+          _pendingGoogleTasksSync = false;
+          unawaited(_autoSyncGoogleTasks());
+        }
+      }
     }
   }
 
@@ -194,7 +281,13 @@ class _TodoPageState extends State<TodoPage> {
       throw StateError('Google Tasks did not return a task list id.');
     }
 
-    final googleTasks = await _googleTasks.listTasks(taskListId);
+    final googleTasks = await _googleTasks.listTasks(
+      taskListId,
+      includeDeleted: true,
+    );
+    final activeGoogleTasks = googleTasks
+        .where((task) => task.deleted != true)
+        .toList(growable: false);
     final googleById = <String, google_tasks.Task>{
       for (final task in googleTasks)
         if (task.id != null) task.id!: task,
@@ -204,6 +297,7 @@ class _TodoPageState extends State<TodoPage> {
     var updatedGoogle = 0;
     var importedLocal = 0;
     var updatedLocal = 0;
+    var removedLocal = 0;
 
     for (final localTask in localTasks) {
       final googleTaskId = _stringValue(localTask['google_task_id']);
@@ -221,6 +315,12 @@ class _TodoPageState extends State<TodoPage> {
 
       linkedGoogleIds.add(googleTaskId);
       final remoteTask = googleById[googleTaskId];
+      if (remoteTask?.deleted == true) {
+        await _deleteLocalTaskFromGoogle(localTask['id']);
+        removedLocal++;
+        continue;
+      }
+
       if (remoteTask == null) {
         final created = await _googleTasks.createTask(
           taskListId,
@@ -252,7 +352,7 @@ class _TodoPageState extends State<TodoPage> {
       }
     }
 
-    for (final googleTask in googleTasks) {
+    for (final googleTask in activeGoogleTasks) {
       final googleTaskId = googleTask.id;
       if (googleTaskId == null || linkedGoogleIds.contains(googleTaskId)) {
         continue;
@@ -266,6 +366,7 @@ class _TodoPageState extends State<TodoPage> {
       updatedGoogle: updatedGoogle,
       importedLocal: importedLocal,
       updatedLocal: updatedLocal,
+      removedLocal: removedLocal,
     );
   }
 
@@ -346,6 +447,11 @@ class _TodoPageState extends State<TodoPage> {
     } catch (error) {
       _throwGoogleTaskSchemaError(error);
     }
+  }
+
+  Future<void> _deleteLocalTaskFromGoogle(Object? localTaskId) async {
+    if (localTaskId == null) return;
+    await SupabaseService.client.from('tasks').delete().eq('id', localTaskId);
   }
 
   Map<String, dynamic> _localDataFromGoogleTask(
@@ -458,6 +564,7 @@ class _TodoPageState extends State<TodoPage> {
 
   Future<void> _deleteTask(Map<String, dynamic> task) async {
     await _runTaskMutation(() async {
+      await _deleteLinkedGoogleTask(task);
       await SupabaseService.client.from('tasks').delete().eq('id', task['id']);
     });
   }
@@ -465,9 +572,31 @@ class _TodoPageState extends State<TodoPage> {
   Future<void> _runTaskMutation(Future<void> Function() mutation) async {
     try {
       await mutation();
-      if (mounted) _refresh();
+      if (mounted) {
+        _refresh();
+        unawaited(_autoSyncGoogleTasks());
+      }
     } catch (error) {
       _showError('Could not update task: $error');
+    }
+  }
+
+  Future<void> _deleteLinkedGoogleTask(Map<String, dynamic> task) async {
+    if (!_googleTasksAuthorized || !_googleTasks.isAuthorized) return;
+    final taskListId = _stringValue(task['google_task_list_id']);
+    final taskId = _stringValue(task['google_task_id']);
+    if (taskListId == null || taskId == null) return;
+
+    try {
+      await _googleTasks.deleteTask(taskListId, taskId);
+    } catch (error) {
+      if (_googleTasks.isAuthorizationError(error)) {
+        _googleTasks.clearAuthorization();
+        _stopGoogleTasksAutoSyncTimer();
+        if (mounted) setState(() => _googleTasksAuthorized = false);
+        return;
+      }
+      _showError('Could not delete Google Tasks copy: $error');
     }
   }
 
@@ -701,7 +830,10 @@ class _TodoPageState extends State<TodoPage> {
                               await _updateTask(task['id'], updateData);
                             }
                             if (context.mounted) Navigator.pop(context);
-                            if (mounted) _refresh();
+                            if (mounted) {
+                              _refresh();
+                              unawaited(_autoSyncGoogleTasks());
+                            }
                           } catch (error) {
                             setDialogState(() {
                               saving = false;
@@ -785,14 +917,21 @@ class GoogleTasksSyncResult {
     required this.updatedGoogle,
     required this.importedLocal,
     required this.updatedLocal,
+    required this.removedLocal,
   });
 
   final int createdGoogle;
   final int updatedGoogle;
   final int importedLocal;
   final int updatedLocal;
+  final int removedLocal;
 
-  int get total => createdGoogle + updatedGoogle + importedLocal + updatedLocal;
+  int get total =>
+      createdGoogle +
+      updatedGoogle +
+      importedLocal +
+      updatedLocal +
+      removedLocal;
 
   String get message {
     if (total == 0) return 'Everything is already in sync.';
@@ -801,205 +940,7 @@ class GoogleTasksSyncResult {
       if (updatedGoogle > 0) '$updatedGoogle updated in Google',
       if (importedLocal > 0) '$importedLocal imported',
       if (updatedLocal > 0) '$updatedLocal updated locally',
+      if (removedLocal > 0) '$removedLocal removed locally',
     ].join(', ');
-  }
-}
-
-class _GoogleTasksSyncDialog extends StatefulWidget {
-  const _GoogleTasksSyncDialog({
-    required this.service,
-    required this.localTasks,
-    required this.onSync,
-    required this.onSynced,
-  });
-
-  final GoogleTasksService service;
-  final List<Map<String, dynamic>> localTasks;
-  final Future<GoogleTasksSyncResult> Function(List<Map<String, dynamic>> tasks)
-  onSync;
-  final VoidCallback onSynced;
-
-  @override
-  State<_GoogleTasksSyncDialog> createState() => _GoogleTasksSyncDialogState();
-}
-
-class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
-  String? _accountEmail;
-  bool _authorized = false;
-  bool _initializing = true;
-  bool _busy = false;
-  String? _error;
-  GoogleTasksSyncResult? _result;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    try {
-      await widget.service.initialize(
-        onAuthChanged: (accountEmail, authorized) {
-          if (!mounted) return;
-          setState(() {
-            _accountEmail = accountEmail;
-            _authorized = authorized;
-            _error = null;
-          });
-        },
-        onError: (error) {
-          if (!mounted) return;
-          setState(() => _error = error.toString());
-        },
-      );
-      if (!mounted) return;
-      setState(() {
-        _accountEmail = widget.service.accountEmail;
-        _authorized = widget.service.isAuthorized;
-        _initializing = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error.toString();
-        _initializing = false;
-      });
-    }
-  }
-
-  Future<void> _sync() async {
-    await _run(() async {
-      GoogleTasksSyncResult result;
-      try {
-        result = await widget.onSync(widget.localTasks);
-      } catch (error) {
-        if (widget.service.isAuthorizationError(error)) {
-          widget.service.clearAuthorization();
-          setState(() {
-            _authorized = false;
-            _result = null;
-          });
-          throw StateError(
-            'Google Tasks needs permission. Connect Google Tasks again.',
-          );
-        }
-        rethrow;
-      }
-      widget.onSynced();
-      setState(() => _result = result);
-    });
-  }
-
-  Future<void> _renewAccess() async {
-    await _run(() async {
-      await widget.service.signInAndAuthorize();
-      setState(() {
-        _accountEmail = widget.service.accountEmail;
-        _authorized = widget.service.isAuthorized;
-      });
-    });
-  }
-
-  Future<void> _run(Future<void> Function() action) async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await action();
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _error = error.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Sync Google Tasks'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: _initializing
-            ? const SizedBox(
-                height: 120,
-                child: Center(child: ExpressiveLoadingIndicator()),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_error != null) ...[
-                    Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-                  if (!AppConfig.googleApisConfigured)
-                    const Text(
-                      'Add GOOGLE_OAUTH_CLIENT_ID to .env and enable the Google Tasks API.',
-                    )
-                  else if (_accountEmail == null) ...[
-                    const Text(
-                      'Connect Google from Settings > Account before syncing Tasks.',
-                    ),
-                  ] else if (!_authorized) ...[
-                    Text('Connected as $_accountEmail.'),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Google is still connected. Refresh access to sync Tasks in this session.',
-                    ),
-                    const SizedBox(height: 14),
-                    FilledButton.icon(
-                      onPressed: _busy ? null : _renewAccess,
-                      icon: _busy
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.verified_user_outlined),
-                      label: const Text('Refresh access'),
-                    ),
-                  ] else ...[
-                    Text('Connected as $_accountEmail.'),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Sync creates or updates tasks in the Project BluePill Google Tasks list and imports Google tasks back here.',
-                    ),
-                    if (_result != null) ...[
-                      const SizedBox(height: 14),
-                      Text(
-                        _result!.message,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _busy ? null : () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-        if (_authorized)
-          FilledButton.icon(
-            onPressed: _busy ? null : _sync,
-            icon: _busy
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.sync),
-            label: const Text('Sync now'),
-          ),
-      ],
-    );
   }
 }

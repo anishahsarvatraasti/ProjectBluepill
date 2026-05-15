@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:intl/intl.dart';
@@ -16,7 +18,10 @@ class CalendarPage extends StatefulWidget {
   State<CalendarPage> createState() => _CalendarPageState();
 }
 
-class _CalendarPageState extends State<CalendarPage> {
+class _CalendarPageState extends State<CalendarPage>
+    with WidgetsBindingObserver {
+  static const _calendarAutoRefreshInterval = Duration(minutes: 5);
+
   final _calendar = GoogleCalendarService();
   final _mcp = McpContextService();
   final _dateFormat = DateFormat('EEE, MMM d');
@@ -38,17 +43,27 @@ class _CalendarPageState extends State<CalendarPage> {
   bool _loadingEvents = false;
   bool _busy = false;
   String? _error;
+  Timer? _calendarAutoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeCalendar();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _calendarAutoRefreshTimer?.cancel();
     _calendar.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_calendar.isAuthorized) return;
+    unawaited(_loadEvents());
   }
 
   Future<void> _initializeCalendar() async {
@@ -62,7 +77,10 @@ class _CalendarPageState extends State<CalendarPage> {
             _error = null;
           });
           if (authorized) {
+            _startCalendarAutoRefreshTimer();
             await _loadEvents();
+          } else {
+            _stopCalendarAutoRefreshTimer();
           }
         },
         onError: (error) {
@@ -77,7 +95,10 @@ class _CalendarPageState extends State<CalendarPage> {
         _initializing = false;
       });
       if (_calendar.isAuthorized) {
+        _startCalendarAutoRefreshTimer();
         await _loadEvents();
+      } else {
+        _stopCalendarAutoRefreshTimer();
       }
     } catch (error) {
       if (!mounted) return;
@@ -88,8 +109,20 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
+  void _startCalendarAutoRefreshTimer() {
+    _calendarAutoRefreshTimer ??= Timer.periodic(
+      _calendarAutoRefreshInterval,
+      (_) => unawaited(_loadEvents()),
+    );
+  }
+
+  void _stopCalendarAutoRefreshTimer() {
+    _calendarAutoRefreshTimer?.cancel();
+    _calendarAutoRefreshTimer = null;
+  }
+
   Future<void> _loadEvents() async {
-    if (!_calendar.isAuthorized) return;
+    if (!_calendar.isAuthorized || _loadingEvents) return;
     setState(() => _loadingEvents = true);
     try {
       final events = await _calendar.listUpcomingEvents();
@@ -103,6 +136,7 @@ class _CalendarPageState extends State<CalendarPage> {
       if (!mounted) return;
       if (_calendar.isAuthorizationError(error)) {
         _calendar.clearAuthorization();
+        _stopCalendarAutoRefreshTimer();
         setState(() {
           _authorized = false;
           _events = [];

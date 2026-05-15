@@ -26,7 +26,7 @@ class _MainShellState extends State<MainShell> {
     _NavItem('Todo', Icons.check_circle_outline, TodoPage()),
     _NavItem('Calendar', Icons.calendar_month_outlined, CalendarPage()),
     _NavItem('Habits', Icons.repeat, HabitsPage()),
-    _NavItem('Cron Jobs', Icons.schedule_send_outlined, CronJobsPage()),
+    _NavItem('Cron Jobs', Icons.alarm_on_outlined, CronJobsPage()),
     _NavItem('Agent', Icons.support_agent_outlined, AgentPage()),
     _NavItem('Settings', Icons.settings_outlined, SettingsPage()),
   ];

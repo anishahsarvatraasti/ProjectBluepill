@@ -100,7 +100,7 @@ class _CronJobsPageState extends State<CronJobsPage> {
           final data = snapshot.data!;
           if (data.jobs.isEmpty) {
             return const EmptyState(
-              icon: Icons.schedule_send_outlined,
+              icon: Icons.alarm_on_outlined,
               title: 'No cron jobs',
               message: 'Create a backend schedule for a recurring task.',
             );
@@ -784,15 +784,17 @@ class _CronJobDialogState extends State<_CronJobDialog> {
   late String _task;
   late bool _enabled;
   late bool _saving;
+  late _ScheduleInputMode _scheduleMode;
+  late TimeOfDay _dailyTime;
 
   @override
   void initState() {
     super.initState();
     final job = widget.job;
+    final initialSchedule = job?['schedule']?.toString() ?? '0 9 * * *';
+    final initialDailyTime = _dailyTimeFromSchedule(initialSchedule);
     _name = TextEditingController(text: job?['name']?.toString() ?? '');
-    _schedule = TextEditingController(
-      text: job?['schedule']?.toString() ?? '0 9 * * *',
-    );
+    _schedule = TextEditingController(text: initialSchedule);
     _timezone = TextEditingController(
       text: job?['timezone']?.toString() ?? 'UTC',
     );
@@ -814,6 +816,10 @@ class _CronJobDialogState extends State<_CronJobDialog> {
     _task = job?['task']?.toString() ?? 'agent_prompt';
     _enabled = job?['enabled'] != false;
     _saving = widget.saving;
+    _dailyTime = initialDailyTime ?? const TimeOfDay(hour: 9, minute: 0);
+    _scheduleMode = initialDailyTime == null && job != null
+        ? _ScheduleInputMode.cron
+        : _ScheduleInputMode.daily;
   }
 
   @override
@@ -850,18 +856,56 @@ class _CronJobDialogState extends State<_CronJobDialog> {
                   validator: _required,
                 ),
                 const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SegmentedButton<_ScheduleInputMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: _ScheduleInputMode.daily,
+                        icon: Icon(Icons.access_time),
+                        label: Text('Daily time'),
+                      ),
+                      ButtonSegment(
+                        value: _ScheduleInputMode.cron,
+                        icon: Icon(Icons.code),
+                        label: Text('Cron'),
+                      ),
+                    ],
+                    selected: {_scheduleMode},
+                    onSelectionChanged: _saving
+                        ? null
+                        : (selection) {
+                            final mode = selection.first;
+                            setState(() {
+                              _scheduleMode = mode;
+                              if (mode == _ScheduleInputMode.daily) {
+                                _schedule.text = _dailyCron(_dailyTime);
+                              }
+                            });
+                          },
+                  ),
+                ),
+                const SizedBox(height: 12),
                 _ResponsiveFieldRow(
                   flexes: const [2, 1],
                   children: [
-                    TextFormField(
-                      controller: _schedule,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Schedule',
-                        prefixIcon: Icon(Icons.schedule),
+                    if (_scheduleMode == _ScheduleInputMode.daily)
+                      _TimePickerField(
+                        time: _dailyTime,
+                        cronText: _dailyCron(_dailyTime),
+                        enabled: !_saving,
+                        onTap: _pickDailyTime,
+                      )
+                    else
+                      TextFormField(
+                        controller: _schedule,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Cron expression',
+                          prefixIcon: Icon(Icons.schedule),
+                        ),
+                        validator: _required,
                       ),
-                      validator: _required,
-                    ),
                     TextFormField(
                       controller: _timezone,
                       textInputAction: TextInputAction.next,
@@ -968,12 +1012,15 @@ class _CronJobDialogState extends State<_CronJobDialog> {
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final payload = jsonDecode(_payload.text) as Map<String, dynamic>;
+    final schedule = _scheduleMode == _ScheduleInputMode.daily
+        ? _dailyCron(_dailyTime)
+        : _schedule.text.trim();
     setState(() => _saving = true);
     try {
       await widget.onSave(
         _CronJobDraft(
           name: _name.text.trim(),
-          schedule: _schedule.text.trim(),
+          schedule: schedule,
           task: _task,
           payload: payload,
           enabled: _enabled,
@@ -1006,6 +1053,73 @@ class _CronJobDialogState extends State<_CronJobDialog> {
     if (parsed == null) return 'Number';
     if (parsed < min || parsed > max) return '$min-$max';
     return null;
+  }
+
+  Future<void> _pickDailyTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _dailyTime,
+    );
+    if (!mounted || picked == null) return;
+    setState(() {
+      _dailyTime = picked;
+      _schedule.text = _dailyCron(picked);
+    });
+  }
+}
+
+enum _ScheduleInputMode { daily, cron }
+
+class _TimePickerField extends StatelessWidget {
+  const _TimePickerField({
+    required this.time,
+    required this.cronText,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final TimeOfDay time;
+  final String cronText;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          enabled: enabled,
+          labelText: 'Run time',
+          prefixIcon: const Icon(Icons.access_time),
+          suffixIcon: const Icon(Icons.arrow_drop_down),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                time.format(context),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              cronText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1325,6 +1439,19 @@ String _shortId(Object? value) {
   final text = value?.toString() ?? '';
   return text.length <= 8 ? text : text.substring(0, 8);
 }
+
+TimeOfDay? _dailyTimeFromSchedule(String schedule) {
+  final parts = schedule.trim().split(RegExp(r'\s+'));
+  if (parts.length != 5) return null;
+  if (parts[2] != '*' || parts[3] != '*' || parts[4] != '*') return null;
+  final minute = int.tryParse(parts[0]);
+  final hour = int.tryParse(parts[1]);
+  if (minute == null || hour == null) return null;
+  if (minute < 0 || minute > 59 || hour < 0 || hour > 23) return null;
+  return TimeOfDay(hour: hour, minute: minute);
+}
+
+String _dailyCron(TimeOfDay time) => '${time.minute} ${time.hour} * * *';
 
 String _prettyJson(Object? value) {
   try {
