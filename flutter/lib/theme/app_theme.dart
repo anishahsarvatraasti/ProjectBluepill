@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _blue = Color(0xFF2563EB);
-  static const _darkBlue = Color(0xFF60A5FA);
-  static const _lime = Color(0xFF65A30D);
-  static const _darkLime = Color(0xFFA3E635);
-  static const _rose = Color(0xFFE11D48);
-  static const _darkRose = Color(0xFFFB7185);
+  static const _blue = Color(0xFF3D7EFF);
+  static const _darkBlue = Color(0xFF3D7EFF);
+  static const _green = Color(0xFF00C853);
+  static const _darkGreen = Color(0xFF00C853);
+  static const _red = Color(0xFFFF3D71);
+  static const _darkRed = Color(0xFFFF3D71);
   static const _lightBackground = Color(0xFFF5F7FB);
   static const _lightSurface = Color(0xFFFFFFFF);
   static const _lightSurfaceAlt = Color(0xFFF8FAFC);
@@ -176,23 +176,23 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: Colors.transparent,
+          backgroundColor: colorScheme.primary,
           disabledBackgroundColor:
               colorScheme.onSurface.withValues(alpha: 0.12),
           foregroundColor: colorScheme.onPrimary,
           disabledForegroundColor:
               colorScheme.onSurface.withValues(alpha: 0.38),
-          shadowColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
+          surfaceTintColor: colorScheme.surfaceTint,
+          shadowColor: Colors.black.withValues(alpha: isDark ? 0.40 : 0.20),
+          elevation: 2,
           minimumSize: const Size(64, 50),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           textStyle: textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w900,
+            color: colorScheme.onPrimary,
           ),
           shape: _buttonShape,
           animationDuration: _quickMotion,
-          backgroundBuilder: _filledButtonBackground(colorScheme),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -204,8 +204,8 @@ class AppTheme {
           disabledForegroundColor:
               colorScheme.onSurface.withValues(alpha: 0.38),
           surfaceTintColor: colorScheme.surfaceTint,
-          shadowColor: Colors.black.withValues(alpha: isDark ? 0.36 : 0.12),
-          elevation: 1,
+          shadowColor: Colors.black.withValues(alpha: isDark ? 0.40 : 0.18),
+          elevation: 2,
           minimumSize: const Size(64, 50),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           textStyle: textTheme.labelLarge?.copyWith(
@@ -220,7 +220,7 @@ class AppTheme {
           foregroundColor: colorScheme.primary,
           disabledForegroundColor:
               colorScheme.onSurface.withValues(alpha: 0.38),
-          side: BorderSide(color: borderColor),
+          side: BorderSide(color: colorScheme.primary, width: 1.5),
           minimumSize: const Size(64, 50),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           textStyle: textTheme.labelLarge?.copyWith(
@@ -228,7 +228,6 @@ class AppTheme {
           ),
           shape: _buttonShape,
           animationDuration: _quickMotion,
-          backgroundBuilder: _quietButtonBackground(colorScheme),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -243,7 +242,6 @@ class AppTheme {
           ),
           shape: _buttonShape,
           animationDuration: _quickMotion,
-          backgroundBuilder: _quietButtonBackground(colorScheme),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -570,35 +568,41 @@ class AppTheme {
 
     return base.copyWith(
       primary: isDark ? _darkBlue : _blue,
-      onPrimary: isDark ? const Color(0xFF082F49) : Colors.white,
+      onPrimary: isDark ? const Color(0xFF1A2B3C) : const Color(0xFF1A2B3C),
       primaryContainer:
-          isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
+          isDark ? const Color(0xFF3C5A7A) : const Color(0xFFD2E3FC),
       onPrimaryContainer:
-          isDark ? const Color(0xFFDBEAFE) : const Color(0xFF172554),
-      primaryFixed: const Color(0xFFDBEAFE),
-      primaryFixedDim: const Color(0xFFBFDBFE),
-      onPrimaryFixed: const Color(0xFF172554),
-      onPrimaryFixedVariant: const Color(0xFF1D4ED8),
-      secondary: isDark ? _darkLime : _lime,
-      onSecondary: isDark ? const Color(0xFF1A2E05) : const Color(0xFF0F1A03),
+          isDark ? const Color(0xFFD2E3FC) : const Color(0xFF1A2B3C),
+      primaryFixed: const Color(0xFFD2E3FC),
+      primaryFixedDim: const Color(0xFFA8C7FA),
+      onPrimaryFixed: const Color(0xFF1A2B3C),
+      onPrimaryFixedVariant: const Color(0xFF4A7ABC),
+      secondary: isDark ? _darkGreen : _green,
+      onSecondary: isDark ? const Color(0xFF1A2E1A) : const Color(0xFF1A2E1A),
       secondaryContainer:
-          isDark ? const Color(0xFF365314) : const Color(0xFFECFCCB),
+          isDark ? const Color(0xFF3A6B4A) : const Color(0xFFD4EDDA),
       onSecondaryContainer:
-          isDark ? const Color(0xFFECFCCB) : const Color(0xFF1A2E05),
-      secondaryFixed: const Color(0xFFECFCCB),
-      secondaryFixedDim: const Color(0xFFD9F99D),
-      onSecondaryFixed: const Color(0xFF1A2E05),
-      onSecondaryFixedVariant: const Color(0xFF3F6212),
-      tertiary: isDark ? _darkRose : _rose,
-      onTertiary: isDark ? const Color(0xFF4C0519) : Colors.white,
+          isDark ? const Color(0xFFD4EDDA) : const Color(0xFF1A2E1A),
+      secondaryFixed: const Color(0xFFD4EDDA),
+      secondaryFixedDim: const Color(0xFFA8D8B5),
+      onSecondaryFixed: const Color(0xFF1A2E1A),
+      onSecondaryFixedVariant: const Color(0xFF4A8B5A),
+      tertiary: isDark ? _darkRed : _red,
+      onTertiary: isDark ? const Color(0xFF2E1A1A) : const Color(0xFF2E1A1A),
       tertiaryContainer:
-          isDark ? const Color(0xFF881337) : const Color(0xFFFFE4E6),
+          isDark ? const Color(0xFF6B3A3A) : const Color(0xFFFCE4E2),
       onTertiaryContainer:
-          isDark ? const Color(0xFFFFE4E6) : const Color(0xFF4C0519),
-      tertiaryFixed: const Color(0xFFFFE4E6),
-      tertiaryFixedDim: const Color(0xFFFECDD3),
-      onTertiaryFixed: const Color(0xFF4C0519),
-      onTertiaryFixedVariant: const Color(0xFFBE123C),
+          isDark ? const Color(0xFFFCE4E2) : const Color(0xFF2E1A1A),
+      tertiaryFixed: const Color(0xFFFCE4E2),
+      tertiaryFixedDim: const Color(0xFFF5B8B3),
+      onTertiaryFixed: const Color(0xFF2E1A1A),
+      onTertiaryFixedVariant: const Color(0xFFBC4A42),
+      error: isDark ? _darkRed : _red,
+      onError: isDark ? const Color(0xFF2E1A1A) : const Color(0xFF2E1A1A),
+      errorContainer:
+          isDark ? const Color(0xFF6B3A3A) : const Color(0xFFFCE4E2),
+      onErrorContainer:
+          isDark ? const Color(0xFFFCE4E2) : const Color(0xFF2E1A1A),
       surface: isDark ? _darkSurface : _lightSurface,
       onSurface: isDark ? _darkText : _lightText,
       surfaceDim: isDark ? _darkBackground : const Color(0xFFE5E7EB),
@@ -666,56 +670,6 @@ class AppTheme {
       borderRadius: BorderRadius.circular(radius),
       side: BorderSide(color: color, width: width),
     );
-  }
-
-  static ButtonLayerBuilder _filledButtonBackground(ColorScheme colorScheme) {
-    return (context, states, child) {
-      final disabled = states.contains(WidgetState.disabled);
-      final pressed = states.contains(WidgetState.pressed);
-      final hovered = states.contains(WidgetState.hovered);
-
-      Color backgroundColor;
-      if (disabled) {
-        backgroundColor = colorScheme.onSurface.withValues(alpha: 0.12);
-      } else if (pressed) {
-        backgroundColor = colorScheme.primaryContainer;
-      } else if (hovered) {
-        backgroundColor = colorScheme.primaryContainer.withValues(alpha: 0.85);
-      } else {
-        backgroundColor = colorScheme.primaryContainer;
-      }
-
-      return ClipPath.shape(
-        shape: _buttonShape,
-        child: AnimatedContainer(
-          duration: _quickMotion,
-          curve: Easing.emphasizedDecelerate,
-          decoration: ShapeDecoration(
-            color: backgroundColor,
-            shape: _buttonShape,
-          ),
-          child: child,
-        ),
-      );
-    };
-  }
-
-  static ButtonLayerBuilder _quietButtonBackground(ColorScheme colorScheme) {
-    return (context, states, child) {
-      final layer = _stateLayer(states, colorScheme.primary);
-      return ClipPath.shape(
-        shape: _buttonShape,
-        child: AnimatedContainer(
-          duration: _quickMotion,
-          curve: Easing.emphasizedDecelerate,
-          decoration: ShapeDecoration(
-            color: layer,
-            shape: _buttonShape,
-          ),
-          child: child,
-        ),
-      );
-    };
   }
 
   static Color? _stateLayer(Set<WidgetState> states, Color color) {
