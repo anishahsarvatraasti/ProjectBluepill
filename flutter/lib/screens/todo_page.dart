@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/tasks/v1.dart' as google_tasks;
 
 import '../config/app_config.dart';
@@ -11,7 +9,6 @@ import '../services/mcp_context_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
 import '../ui/expressive_loading_indicator.dart';
-import '../ui/google_calendar_sign_in_button.dart';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -144,7 +141,9 @@ class _TodoPageState extends State<TodoPage> {
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'edit', child: Text('Edit')),
                       PopupMenuItem(
-                          value: 'missed', child: Text('Mark missed')),
+                        value: 'missed',
+                        child: Text('Mark missed'),
+                      ),
                       PopupMenuItem(
                         value: 'tomorrow',
                         child: Text('Move to tomorrow'),
@@ -302,11 +301,14 @@ class _TodoPageState extends State<TodoPage> {
     final taskId = googleTask.id;
     if (localTaskId == null || taskId == null) return;
     try {
-      await SupabaseService.client.from('tasks').update({
-        'google_task_id': taskId,
-        'google_task_list_id': taskListId,
-        'google_task_updated_at': _googleUpdatedAt(googleTask),
-      }).eq('id', localTaskId);
+      await SupabaseService.client
+          .from('tasks')
+          .update({
+            'google_task_id': taskId,
+            'google_task_list_id': taskListId,
+            'google_task_updated_at': _googleUpdatedAt(googleTask),
+          })
+          .eq('id', localTaskId);
     } catch (error) {
       _throwGoogleTaskSchemaError(error);
     }
@@ -421,30 +423,36 @@ class _TodoPageState extends State<TodoPage> {
 
   Future<void> _toggleTask(Map<String, dynamic> task, bool completed) async {
     await _runTaskMutation(() async {
-      await SupabaseService.client.from('tasks').update({
-        'status': completed ? 'completed' : 'pending',
-        'completed_at': completed ? DateTime.now().toIso8601String() : null,
-      }).eq('id', task['id']);
+      await SupabaseService.client
+          .from('tasks')
+          .update({
+            'status': completed ? 'completed' : 'pending',
+            'completed_at': completed ? DateTime.now().toIso8601String() : null,
+          })
+          .eq('id', task['id']);
     });
   }
 
   Future<void> _markMissed(Map<String, dynamic> task) async {
     await _runTaskMutation(() async {
-      await SupabaseService.client.from('tasks').update({
-        'status': 'missed',
-        'completed_at': null,
-      }).eq('id', task['id']);
+      await SupabaseService.client
+          .from('tasks')
+          .update({'status': 'missed', 'completed_at': null})
+          .eq('id', task['id']);
     });
   }
 
   Future<void> _moveToTomorrow(Map<String, dynamic> task) async {
     final tomorrow = dateKey(DateTime.now().add(const Duration(days: 1)));
     await _runTaskMutation(() async {
-      await SupabaseService.client.from('tasks').update({
-        'status': 'pending',
-        'due_date': tomorrow,
-        'completed_at': null,
-      }).eq('id', task['id']);
+      await SupabaseService.client
+          .from('tasks')
+          .update({
+            'status': 'pending',
+            'due_date': tomorrow,
+            'completed_at': null,
+          })
+          .eq('id', task['id']);
     });
   }
 
@@ -465,9 +473,9 @@ class _TodoPageState extends State<TodoPage> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _editTask([Map<String, dynamic>? task]) async {
@@ -481,8 +489,9 @@ class _TodoPageState extends State<TodoPage> {
     if (!mounted) return;
     final goalIds = goals.map((goal) => goal['id'].toString()).toSet();
     final title = TextEditingController(text: task?['title']?.toString());
-    final description =
-        TextEditingController(text: task?['description']?.toString());
+    final description = TextEditingController(
+      text: task?['description']?.toString(),
+    );
     final estimate = TextEditingController(
       text: task?['estimated_minutes']?.toString() ?? '',
     );
@@ -530,8 +539,9 @@ class _TodoPageState extends State<TodoPage> {
                       controller: description,
                       minLines: 2,
                       maxLines: 4,
-                      decoration:
-                          const InputDecoration(labelText: 'Description'),
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -540,7 +550,9 @@ class _TodoPageState extends State<TodoPage> {
                       items: const [
                         DropdownMenuItem(value: 'high', child: Text('High')),
                         DropdownMenuItem(
-                            value: 'medium', child: Text('Medium')),
+                          value: 'medium',
+                          child: Text('Medium'),
+                        ),
                         DropdownMenuItem(value: 'low', child: Text('Low')),
                       ],
                       onChanged: (value) =>
@@ -554,7 +566,9 @@ class _TodoPageState extends State<TodoPage> {
                         DropdownMenuItem(value: 'study', child: Text('Study')),
                         DropdownMenuItem(value: 'work', child: Text('Work')),
                         DropdownMenuItem(
-                            value: 'health', child: Text('Health')),
+                          value: 'health',
+                          child: Text('Health'),
+                        ),
                         DropdownMenuItem(
                           value: 'finance',
                           child: Text('Finance'),
@@ -564,7 +578,9 @@ class _TodoPageState extends State<TodoPage> {
                           child: Text('Personal'),
                         ),
                         DropdownMenuItem(
-                            value: 'career', child: Text('Career')),
+                          value: 'career',
+                          child: Text('Career'),
+                        ),
                       ],
                       onChanged: (value) =>
                           setDialogState(() => category = value ?? category),
@@ -602,10 +618,12 @@ class _TodoPageState extends State<TodoPage> {
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
-                          firstDate: DateTime.now()
-                              .subtract(const Duration(days: 365)),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 3650)),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 365),
+                          ),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 3650),
+                          ),
                           initialDate: dueDate ?? DateTime.now(),
                         );
                         if (picked != null) {
@@ -664,14 +682,16 @@ class _TodoPageState extends State<TodoPage> {
                               'description': description.text.trim(),
                               'priority': priority,
                               'category': category,
-                              'due_date':
-                                  dueDate == null ? null : dateKey(dueDate!),
+                              'due_date': dueDate == null
+                                  ? null
+                                  : dateKey(dueDate!),
                               'estimated_minutes': estimatedMinutes,
                             };
                             if (goalId != 'none' ||
                                 task?.containsKey('goal_id') == true) {
-                              data['goal_id'] =
-                                  goalId == 'none' ? null : goalId;
+                              data['goal_id'] = goalId == 'none'
+                                  ? null
+                                  : goalId;
                             }
                             if (task == null) {
                               await _saveNewTask(data);
@@ -720,10 +740,7 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
-  Future<void> _updateTask(
-    Object taskId,
-    Map<String, dynamic> data,
-  ) async {
+  Future<void> _updateTask(Object taskId, Map<String, dynamic> data) async {
     try {
       await SupabaseService.client.from('tasks').update(data).eq('id', taskId);
     } catch (error) {
@@ -799,7 +816,7 @@ class _GoogleTasksSyncDialog extends StatefulWidget {
   final GoogleTasksService service;
   final List<Map<String, dynamic>> localTasks;
   final Future<GoogleTasksSyncResult> Function(List<Map<String, dynamic>> tasks)
-      onSync;
+  onSync;
   final VoidCallback onSynced;
 
   @override
@@ -807,7 +824,7 @@ class _GoogleTasksSyncDialog extends StatefulWidget {
 }
 
 class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
-  GoogleSignInAccount? _user;
+  String? _accountEmail;
   bool _authorized = false;
   bool _initializing = true;
   bool _busy = false;
@@ -823,10 +840,10 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
   Future<void> _initialize() async {
     try {
       await widget.service.initialize(
-        onAuthChanged: (user, authorized) {
+        onAuthChanged: (accountEmail, authorized) {
           if (!mounted) return;
           setState(() {
-            _user = user;
+            _accountEmail = accountEmail;
             _authorized = authorized;
             _error = null;
           });
@@ -838,7 +855,7 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
       );
       if (!mounted) return;
       setState(() {
-        _user = widget.service.currentUser;
+        _accountEmail = widget.service.accountEmail;
         _authorized = widget.service.isAuthorized;
         _initializing = false;
       });
@@ -851,39 +868,26 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
     }
   }
 
-  Future<void> _connect() async {
-    await _run(() async {
-      await widget.service.signInAndAuthorize();
-      setState(() {
-        _user = widget.service.currentUser;
-        _authorized = widget.service.isAuthorized;
-      });
-    });
-  }
-
-  Future<void> _authorize() async {
-    await _run(() async {
-      await widget.service.authorizeTasks();
-      setState(() => _authorized = widget.service.isAuthorized);
-    });
-  }
-
   Future<void> _sync() async {
     await _run(() async {
-      final result = await widget.onSync(widget.localTasks);
+      GoogleTasksSyncResult result;
+      try {
+        result = await widget.onSync(widget.localTasks);
+      } catch (error) {
+        if (widget.service.isAuthorizationError(error)) {
+          widget.service.clearAuthorization();
+          setState(() {
+            _authorized = false;
+            _result = null;
+          });
+          throw StateError(
+            'Google Tasks needs permission. Connect Google Tasks again.',
+          );
+        }
+        rethrow;
+      }
       widget.onSynced();
       setState(() => _result = result);
-    });
-  }
-
-  Future<void> _disconnect() async {
-    await _run(() async {
-      await widget.service.disconnect();
-      setState(() {
-        _user = null;
-        _authorized = false;
-        _result = null;
-      });
     });
   }
 
@@ -931,44 +935,18 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
                     const Text(
                       'Add GOOGLE_OAUTH_CLIENT_ID to .env and enable the Google Tasks API.',
                     )
-                  else if (_user == null) ...[
+                  else if (_accountEmail == null) ...[
                     const Text(
-                      'Connect Google to sync this Todo list with a Project BluePill list in Google Tasks.',
+                      'Connect Google from Settings > Account before syncing Tasks.',
                     ),
-                    const SizedBox(height: 14),
-                    if (kIsWeb)
-                      googleCalendarSignInButton(
-                        onPressed: _connect,
-                        label: 'Connect Google Tasks',
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _connect,
-                        icon: _busy
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: ExpressiveLoadingIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.task_alt),
-                        label: const Text('Connect Google Tasks'),
-                      ),
                   ] else if (!_authorized) ...[
-                    Text('Connected as ${_user!.email}.'),
-                    const SizedBox(height: 14),
-                    FilledButton.icon(
-                      onPressed: _busy ? null : _authorize,
-                      icon: _busy
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.verified_user_outlined),
-                      label: const Text('Allow Tasks access'),
+                    Text('Connected as $_accountEmail.'),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Reconnect Google from Settings > Account to refresh Tasks access.',
                     ),
                   ] else ...[
-                    Text('Connected as ${_user!.email}.'),
+                    Text('Connected as $_accountEmail.'),
                     const SizedBox(height: 8),
                     const Text(
                       'Sync creates or updates tasks in the Project BluePill Google Tasks list and imports Google tasks back here.',
@@ -985,12 +963,6 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
               ),
       ),
       actions: [
-        if (_user != null)
-          TextButton.icon(
-            onPressed: _busy ? null : _disconnect,
-            icon: const Icon(Icons.link_off),
-            label: const Text('Disconnect'),
-          ),
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('Close'),

@@ -1,12 +1,13 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/model_helpers.dart';
+import 'google_api_auth_service.dart';
 import 'progress_engine.dart';
 import 'supabase_service.dart';
 
 class McpContextService {
   McpContextService({SupabaseClient? client})
-      : _client = client ?? SupabaseService.client;
+    : _client = client ?? SupabaseService.client;
 
   final SupabaseClient _client;
 
@@ -130,20 +131,13 @@ class McpContextService {
       checkinDate: checkinDate ?? DateTime.now(),
     );
 
-    await _client.from('ai_checkin_streaks').upsert(
-      {
-        ...streak,
-        'user_id': userId,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      onConflict: 'user_id',
-    );
-
-    return {
-      ...?previous,
+    await _client.from('ai_checkin_streaks').upsert({
       ...streak,
       'user_id': userId,
-    };
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'user_id');
+
+    return {...?previous, ...streak, 'user_id': userId};
   }
 
   Future<List<Map<String, dynamic>>> getRecentFeedback(
@@ -157,9 +151,11 @@ class McpContextService {
         .order('created_at', ascending: false)
         .limit(limit * 4);
     return rows(data)
-        .where((item) =>
-            item['related_data'] is! Map ||
-            (item['related_data'] as Map)['source'] != 'agent_chat')
+        .where(
+          (item) =>
+              item['related_data'] is! Map ||
+              (item['related_data'] as Map)['source'] != 'agent_chat',
+        )
         .take(limit)
         .toList();
   }
@@ -167,30 +163,33 @@ class McpContextService {
   Future<List<Map<String, dynamic>>> getConnectedAccounts(String userId) async {
     final data = await _client
         .from('connected_accounts')
-        .select('provider, account_label, account_email, scopes, status, '
-            'expires_at, metadata, updated_at')
+        .select(
+          'provider, account_label, account_email, scopes, status, '
+          'expires_at, metadata, updated_at',
+        )
         .eq('user_id', userId)
         .order('updated_at', ascending: false);
     return rows(data);
   }
 
   Future<Map<String, dynamic>> getGoogleCalendarContext(String userId) async {
-    final account = maybeRow(await _client
-        .from('connected_accounts')
-        .select('account_email, scopes, status, metadata, updated_at')
-        .eq('user_id', userId)
-        .eq('provider', 'google')
-        .eq('status', 'connected')
-        .contains('scopes', ['https://www.googleapis.com/auth/calendar.events'])
-        .order('updated_at', ascending: false)
-        .limit(1)
-        .maybeSingle());
+    final account = maybeRow(
+      await _client
+          .from('connected_accounts')
+          .select('account_email, scopes, status, metadata, updated_at')
+          .eq('user_id', userId)
+          .eq('provider', 'google')
+          .eq('status', 'connected')
+          .contains('scopes', [
+            'https://www.googleapis.com/auth/calendar.events',
+          ])
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle(),
+    );
 
     if (account == null) {
-      return {
-        'connected': false,
-        'events': <Map<String, dynamic>>[],
-      };
+      return {'connected': false, 'events': <Map<String, dynamic>>[]};
     }
 
     final metadata = account['metadata'];
@@ -210,26 +209,24 @@ class McpContextService {
     required List<String> scopes,
     required List<Map<String, dynamic>> upcomingEvents,
   }) async {
-    await _client.from('connected_accounts').upsert(
-      {
-        'user_id': userId,
-        'provider': 'google',
-        'account_label': 'Google Calendar',
-        'account_email': email,
-        'scopes': scopes,
-        'status': 'connected',
-        'metadata': {
-          'source': 'flutter_google_sign_in',
-          'calendar_authorized': true,
-          'synced_at': DateTime.now().toUtc().toIso8601String(),
-          'upcoming_events': upcomingEvents.take(20).toList(growable: false),
-          'note':
-              'OAuth tokens stay in the browser; this is a safe event summary for Agent context.',
-        },
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
+    await _client.from('connected_accounts').upsert({
+      'user_id': userId,
+      'provider': 'google',
+      'account_label': 'Google Calendar',
+      'account_email': email,
+      'scopes': {...scopes, ...GoogleApiAuthService.googleApiScopes}.toList(),
+      'status': 'connected',
+      'metadata': {
+        'source': 'flutter_google_sign_in',
+        'calendar_authorized': true,
+        'tasks_authorized': true,
+        'synced_at': DateTime.now().toUtc().toIso8601String(),
+        'upcoming_events': upcomingEvents.take(20).toList(growable: false),
+        'note':
+            'OAuth tokens stay in the browser; this is a safe event summary for Agent context.',
       },
-      onConflict: 'user_id,provider,account_email',
-    );
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'user_id,provider,account_email');
   }
 
   Future<void> markGoogleCalendarDisconnected({
@@ -256,28 +253,19 @@ class McpContextService {
     await query;
   }
 
-  Future<void> saveProgressLog(
-    String userId,
-    Map<String, dynamic> data,
-  ) async {
-    await _client.from('progress_logs').upsert(
-      {
-        ...data,
-        'user_id': userId,
-        'date': data['date'] ?? dateKey(DateTime.now()),
-      },
-      onConflict: 'user_id,date',
-    );
+  Future<void> saveProgressLog(String userId, Map<String, dynamic> data) async {
+    await _client.from('progress_logs').upsert({
+      ...data,
+      'user_id': userId,
+      'date': data['date'] ?? dateKey(DateTime.now()),
+    }, onConflict: 'user_id,date');
   }
 
   Future<void> saveAIFeedback(
     String userId,
     Map<String, dynamic> feedback,
   ) async {
-    await _client.from('ai_feedback').insert({
-      ...feedback,
-      'user_id': userId,
-    });
+    await _client.from('ai_feedback').insert({...feedback, 'user_id': userId});
   }
 
   Future<Map<String, dynamic>> updateDashboardData(String userId) async {
@@ -300,12 +288,14 @@ class McpContextService {
       }).toList(),
     );
 
-    final existingToday = maybeRow(await _client
-        .from('progress_logs')
-        .select()
-        .eq('user_id', userId)
-        .eq('date', dateKey(DateTime.now()))
-        .maybeSingle());
+    final existingToday = maybeRow(
+      await _client
+          .from('progress_logs')
+          .select()
+          .eq('user_id', userId)
+          .eq('date', dateKey(DateTime.now()))
+          .maybeSingle(),
+    );
     if (existingToday != null) {
       dailyLog['focus_score'] ??= existingToday['focus_score'];
       dailyLog['mood'] ??= existingToday['mood'];
@@ -319,7 +309,8 @@ class McpContextService {
         focusScore: dailyLog['focus_score'] == null
             ? null
             : intValue(dailyLog['focus_score']),
-        reflectionCompleted: dailyLog['ai_summary'] != null ||
+        reflectionCompleted:
+            dailyLog['ai_summary'] != null ||
             checkins.any((item) {
               final created = DateTime.tryParse(item['created_at'].toString());
               return created != null &&
@@ -367,8 +358,9 @@ class McpContextService {
     List<Map<String, dynamic>> progress,
   ) {
     final missedTasks = tasks.where((task) => task['status'] == 'missed');
-    final weakHabits =
-        habits.where((habit) => doubleValue(habit['completion_rate']) < 60);
+    final weakHabits = habits.where(
+      (habit) => doubleValue(habit['completion_rate']) < 60,
+    );
     if (missedTasks.isNotEmpty) {
       return 'Move one missed task into a smaller version today instead of trying to recover everything.';
     }
@@ -387,8 +379,9 @@ class McpContextService {
   ) {
     final recent = progress.take(7).toList();
     final lowFocus = recent.where((log) => intValue(log['focus_score']) < 6);
-    final missedHabits =
-        todayLogs.where((log) => log['status'] == 'missed').length;
+    final missedHabits = todayLogs
+        .where((log) => log['status'] == 'missed')
+        .length;
     if (lowFocus.length >= 3) {
       return 'Your focus scores are low this week. Reduce today to the highest-impact task.';
     }

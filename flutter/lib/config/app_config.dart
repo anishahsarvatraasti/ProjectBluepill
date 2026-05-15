@@ -16,32 +16,32 @@ class AppConfig {
   );
 
   static String get supabaseUrl => _firstNonEmpty([
+    _supabaseUrlDefine,
     dotenv.env['SUPABASE_URL'],
     dotenv.env['NEXT_PUBLIC_SUPABASE_URL'],
-    _supabaseUrlDefine,
   ]);
   static String get supabaseAnonKey => _firstNonEmpty([
+    _supabaseAnonKeyDefine,
     dotenv.env['SUPABASE_ANON_KEY'],
     dotenv.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'],
-    _supabaseAnonKeyDefine,
   ]);
 
   static String get googleOAuthClientId => _firstNonEmpty([
+    _googleOAuthClientIdDefine,
     dotenv.env['GOOGLE_OAUTH_CLIENT_ID'],
     dotenv.env['GOOGLE_CLIENT_ID'],
-    _googleOAuthClientIdDefine,
   ]);
 
   static String get authRedirectOrigin => _firstNonEmpty([
+    _authRedirectOriginDefine,
     dotenv.env['AUTH_REDIRECT_ORIGIN'],
     dotenv.env['APP_ORIGIN'],
-    _authRedirectOriginDefine,
   ]);
 
   static String get fastApiBaseUrl => _firstNonEmpty([
+    _fastApiBaseUrlDefine,
     dotenv.env['FASTAPI_BASE_URL'],
     dotenv.env['WORKER_BASE_URL'],
-    _fastApiBaseUrlDefine,
   ]);
 
   static String authRedirectUrl(Uri currentUri) {

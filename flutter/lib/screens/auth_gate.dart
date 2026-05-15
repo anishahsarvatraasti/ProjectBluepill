@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
 import '../models/model_helpers.dart';
+import '../services/google_account_connection_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/bp_card.dart';
 import '../ui/expressive_loading_indicator.dart';
@@ -24,6 +27,7 @@ class _AuthGateState extends State<AuthGate> {
   int _profileReload = 0;
   Future<Map<String, dynamic>?>? _profileFuture;
   String? _profileUserId;
+  String? _recordedGoogleConnectionKey;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,7 @@ class _AuthGateState extends State<AuthGate> {
       builder: (context, snapshot) {
         final user = SupabaseService.currentUser;
         if (user == null) return const AuthPage();
+        _recordGoogleConnection(user);
 
         return FutureBuilder<Map<String, dynamic>?>(
           key: ValueKey(_profileReload),
@@ -101,6 +106,18 @@ class _AuthGateState extends State<AuthGate> {
     return maybeRow(response);
   }
 
+  void _recordGoogleConnection(User user) {
+    final session = SupabaseService.client.auth.currentSession;
+    final key = '${user.id}:${session?.providerToken ?? ''}';
+    if (_recordedGoogleConnectionKey == key) return;
+    _recordedGoogleConnectionKey = key;
+    unawaited(
+      GoogleAccountConnectionService().recordCurrentSessionIfPossible(
+        source: 'auth_session',
+      ),
+    );
+  }
+
   bool _needsOnboarding(Map<String, dynamic>? profile) {
     if (profile == null) return true;
     final dreamGoal = profile['dream_goal'] ?? profile['main_mission'];
@@ -110,8 +127,9 @@ class _AuthGateState extends State<AuthGate> {
       profile['dob'],
       dreamGoal,
     ];
-    if (requiredText
-        .any((value) => value == null || value.toString().trim().isEmpty)) {
+    if (requiredText.any(
+      (value) => value == null || value.toString().trim().isEmpty,
+    )) {
       return true;
     }
     return _stringList(profile['skills']).isEmpty ||
@@ -228,25 +246,25 @@ class SetupRequiredPage extends StatelessWidget {
                   const SizedBox(height: 18),
                   Text(
                     'Project BluePill needs Supabase credentials',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w900),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Edit flutter/.env with SUPABASE_URL and SUPABASE_ANON_KEY, run the SQL in supabase/schema.sql, then restart the app.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.38),
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.38,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Theme.of(context).dividerColor),
                     ),

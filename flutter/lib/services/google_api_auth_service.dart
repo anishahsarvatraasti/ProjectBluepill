@@ -8,8 +8,11 @@ class GoogleApiAuthService {
 
   static const calendarEventsScope =
       'https://www.googleapis.com/auth/calendar.events';
-  static const supabaseGoogleCalendarScopes =
-      'openid email profile $calendarEventsScope';
+  static const tasksScope = 'https://www.googleapis.com/auth/tasks';
+  static const googleApiScopes = [calendarEventsScope, tasksScope];
+  static const supabaseGoogleApiScopes =
+      'openid email profile $calendarEventsScope $tasksScope';
+  static const supabaseGoogleCalendarScopes = supabaseGoogleApiScopes;
   static const googleOAuthQueryParams = {
     'access_type': 'offline',
     'include_granted_scopes': 'true',

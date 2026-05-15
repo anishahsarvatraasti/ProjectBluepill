@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import '../data/profile_options.dart';
 import '../models/model_helpers.dart';
+import '../services/google_account_connection_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/theme_controller.dart';
 import '../ui/bp_card.dart';
@@ -23,19 +24,23 @@ class _SettingsPageState extends State<SettingsPage> {
   final _role = TextEditingController();
   final _yearlyGoal = TextEditingController();
   final _struggle = TextEditingController();
+  final _googleConnection = GoogleAccountConnectionService();
   DateTime? _dob;
   String _educationStatus = 'student';
   List<String> _skills = [];
   List<String> _interests = [];
   String _motivationStyle = 'friendly';
   late Future<Map<String, dynamic>?> _future;
+  late Future<GoogleAccountConnectionState> _googleFuture;
   bool _saving = false;
+  bool _googleBusy = false;
   bool _hydrated = false;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _googleFuture = _googleConnection.load();
   }
 
   @override
@@ -205,6 +210,23 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
+      ),
+      const SizedBox(height: 16),
+      FutureBuilder<GoogleAccountConnectionState>(
+        future: _googleFuture,
+        builder: (context, snapshot) {
+          return _GoogleAccountCard(
+            loading: snapshot.connectionState == ConnectionState.waiting,
+            busy: _googleBusy,
+            error: snapshot.error,
+            state: snapshot.data,
+            onConnect: _connectGoogle,
+            onDisconnect: snapshot.data?.email == null
+                ? null
+                : () => _disconnectGoogle(snapshot.data!.email),
+            onRefresh: _refreshGoogleConnection,
+          );
+        },
       ),
       const SizedBox(height: 16),
       BpCard(
@@ -436,6 +458,48 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) setState(() => _saving = false);
     }
   }
+
+  Future<void> _connectGoogle() async {
+    setState(() => _googleBusy = true);
+    try {
+      await _googleConnection.connect();
+      if (!mounted) return;
+      setState(() => _googleFuture = _googleConnection.load());
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Google connected.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _googleBusy = false);
+    }
+  }
+
+  Future<void> _disconnectGoogle(String? email) async {
+    setState(() => _googleBusy = true);
+    try {
+      await _googleConnection.disconnect(email: email);
+      if (!mounted) return;
+      setState(() => _googleFuture = _googleConnection.load());
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Google disconnected.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _googleBusy = false);
+    }
+  }
+
+  void _refreshGoogleConnection() {
+    setState(() => _googleFuture = _googleConnection.load());
+  }
 }
 
 List<String> _stringList(Object? value) {
@@ -522,6 +586,108 @@ class _StatusRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text('$label: ${enabled ? 'configured' : 'not configured'}'),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoogleAccountCard extends StatelessWidget {
+  const _GoogleAccountCard({
+    required this.loading,
+    required this.busy,
+    required this.error,
+    required this.state,
+    required this.onConnect,
+    required this.onDisconnect,
+    required this.onRefresh,
+  });
+
+  final bool loading;
+  final bool busy;
+  final Object? error;
+  final GoogleAccountConnectionState? state;
+  final VoidCallback onConnect;
+  final VoidCallback? onDisconnect;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = state?.connected ?? false;
+    final ready = state?.readyNow ?? false;
+    final email = state?.email;
+    return BpCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.account_tree_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Google Account',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Refresh',
+                onPressed: busy ? null : onRefresh,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (!AppConfig.googleApisConfigured)
+            const Text('Add GOOGLE_OAUTH_CLIENT_ID to enable Google sync.')
+          else if (loading)
+            const Center(child: ExpressiveLoadingIndicator())
+          else if (error != null)
+            Text(
+              error.toString(),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else ...[
+            _AccountRow(
+              label: 'Status',
+              value: state?.statusLabel ?? 'Unknown',
+            ),
+            _AccountRow(label: 'Google', value: email ?? 'Not connected'),
+            _StatusRow(label: 'Tasks access', enabled: ready),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.icon(
+                  onPressed: busy ? null : onConnect,
+                  icon: busy
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: ExpressiveLoadingIndicator(strokeWidth: 2),
+                        )
+                      : Icon(connected ? Icons.sync_outlined : Icons.link),
+                  label: Text(
+                    connected ? 'Reconnect Google' : 'Connect Google',
+                  ),
+                ),
+                if (connected)
+                  OutlinedButton.icon(
+                    onPressed: busy ? null : onDisconnect,
+                    icon: const Icon(Icons.link_off),
+                    label: const Text('Disconnect'),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
