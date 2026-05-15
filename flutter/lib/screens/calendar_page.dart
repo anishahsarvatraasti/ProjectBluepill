@@ -88,20 +88,6 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
-  Future<void> _connectAndAuthorize() async {
-    await _runBusyAction(() async {
-      await _calendar.connectCalendar();
-      if (!mounted) return;
-      setState(() {
-        _accountEmail = _calendar.accountEmail;
-        _authorized = _calendar.isAuthorized;
-      });
-      if (_calendar.isAuthorized) {
-        await _loadEvents();
-      }
-    });
-  }
-
   Future<void> _loadEvents() async {
     if (!_calendar.isAuthorized) return;
     setState(() => _loadingEvents = true);
@@ -121,7 +107,7 @@ class _CalendarPageState extends State<CalendarPage> {
           _authorized = false;
           _events = [];
           _error =
-              'Google Calendar needs permission. Connect Google Calendar again.';
+              'Google Calendar needs permission. Refresh Google access from Settings > Account.';
         });
         return;
       }
@@ -129,22 +115,6 @@ class _CalendarPageState extends State<CalendarPage> {
     } finally {
       if (mounted) setState(() => _loadingEvents = false);
     }
-  }
-
-  Future<void> _disconnect() async {
-    await _runBusyAction(() async {
-      final email = _accountEmail;
-      await _calendar.disconnect();
-      await _mcp.markGoogleCalendarDisconnected(
-        userId: SupabaseService.currentUserId,
-        email: email,
-      );
-      setState(() {
-        _accountEmail = null;
-        _authorized = false;
-        _events = [];
-      });
-    });
   }
 
   Future<void> _runBusyAction(Future<void> Function() action) async {
@@ -196,20 +166,10 @@ class _CalendarPageState extends State<CalendarPage> {
                     title: 'Google Calendar',
                     subtitle: _accountEmail ?? 'Primary calendar',
                     trailing: _authorized
-                        ? Wrap(
-                            spacing: 8,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: _busy ? null : _disconnect,
-                                icon: const Icon(Icons.link_off),
-                                label: const Text('Disconnect'),
-                              ),
-                              FilledButton.icon(
-                                onPressed: _busy ? null : () => _editEvent(),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Event'),
-                              ),
-                            ],
+                        ? FilledButton.icon(
+                            onPressed: _busy ? null : () => _editEvent(),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Event'),
                           )
                         : null,
                   ),
@@ -221,11 +181,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   if (!AppConfig.googleCalendarConfigured)
                     const _SetupCard()
                   else if (!_authorized)
-                    _ConnectCard(
-                      busy: _busy,
-                      email: _accountEmail,
-                      onConnect: _connectAndAuthorize,
-                    )
+                    _CalendarAccountCard(email: _accountEmail)
                   else ...[
                     if (_loadingEvents) const LinearProgressIndicator(),
                     if (_loadingEvents) const SizedBox(height: 16),
@@ -653,16 +609,10 @@ class _SetupCard extends StatelessWidget {
   }
 }
 
-class _ConnectCard extends StatelessWidget {
-  const _ConnectCard({
-    required this.busy,
-    required this.email,
-    required this.onConnect,
-  });
+class _CalendarAccountCard extends StatelessWidget {
+  const _CalendarAccountCard({required this.email});
 
-  final bool busy;
   final String? email;
-  final VoidCallback onConnect;
 
   @override
   Widget build(BuildContext context) {
@@ -676,7 +626,7 @@ class _ConnectCard extends StatelessWidget {
               Icon(Icons.event_available_outlined),
               SizedBox(width: 8),
               Text(
-                'Connect calendar',
+                'Calendar account',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ],
@@ -692,16 +642,7 @@ class _ConnectCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
           ],
-          FilledButton.icon(
-            onPressed: busy ? null : onConnect,
-            icon: busy
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: ExpressiveLoadingIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.event_available_outlined),
-            label: const Text('Connect Google Calendar'),
-          ),
+          const Text('Manage Google connection from Settings > Account.'),
         ],
       ),
     );

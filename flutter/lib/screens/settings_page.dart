@@ -614,7 +614,6 @@ class _GoogleAccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final connected = state?.connected ?? false;
-    final liveAccess = state?.hasLiveAccess ?? false;
     final email = state?.email;
     return BpCard(
       child: Column(
@@ -662,7 +661,6 @@ class _GoogleAccountCard extends StatelessWidget {
             ),
             _AccountRow(label: 'Google', value: email ?? 'Not connected'),
             _StatusRow(label: 'Tasks sync', enabled: connected),
-            _StatusRow(label: 'Live access', enabled: liveAccess),
             const SizedBox(height: 8),
             Wrap(
               spacing: 10,
