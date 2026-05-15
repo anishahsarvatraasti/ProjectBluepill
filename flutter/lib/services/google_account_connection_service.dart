@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
@@ -13,6 +14,8 @@ class GoogleAccountConnectionService {
   final SupabaseClient _client;
 
   static const apiScopes = GoogleApiAuthService.googleApiScopes;
+  static const _autoRenewCooldown = Duration(minutes: 10);
+  static const _autoRenewKeyPrefix = 'google_auto_renew_attempt';
 
   Future<GoogleAccountConnectionState> load() async {
     await recordCurrentSessionIfPossible(source: 'settings_load');
@@ -57,6 +60,45 @@ class GoogleAccountConnectionService {
     await _connectWithGoogleSignIn();
   }
 
+  Future<bool> autoRenewConnectedSessionIfNeeded() async {
+    if (!kIsWeb || !AppConfig.googleApisConfigured) return false;
+    final user = SupabaseService.currentUser;
+    if (user == null) return false;
+    if (_hasProviderToken(SupabaseService.client.auth.currentSession)) {
+      return false;
+    }
+
+    final account = await connectedAccount();
+    if (account == null) return false;
+    if (!hasGoogleIdentity(user)) return false;
+
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_autoRenewKeyPrefix:${user.id}';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final lastAttempt = prefs.getInt(key);
+    if (lastAttempt != null &&
+        now - lastAttempt < _autoRenewCooldown.inMilliseconds) {
+      return false;
+    }
+
+    await prefs.setInt(key, now);
+    await renewLiveAccess();
+    return true;
+  }
+
+  Future<void> renewLiveAccess() async {
+    if (!AppConfig.googleApisConfigured) {
+      throw StateError('Missing GOOGLE_OAUTH_CLIENT_ID for Google APIs.');
+    }
+
+    if (kIsWeb) {
+      await _connectWithSupabaseGoogleOAuth(requireLinkedIdentity: true);
+      return;
+    }
+
+    await _connectWithGoogleSignIn();
+  }
+
   Future<void> recordCurrentSessionIfPossible({
     String source = 'session',
   }) async {
@@ -78,6 +120,7 @@ class GoogleAccountConnectionService {
       source: source,
       hasProviderToken: hasProviderToken,
     );
+    await _clearAutoRenewAttempt(user.id);
   }
 
   Future<void> saveConnectedAccount({
@@ -132,7 +175,9 @@ class GoogleAccountConnectionService {
     await query;
   }
 
-  Future<void> _connectWithSupabaseGoogleOAuth() async {
+  Future<void> _connectWithSupabaseGoogleOAuth({
+    bool requireLinkedIdentity = false,
+  }) async {
     final auth = SupabaseService.client.auth;
     final user = auth.currentUser;
     if (user == null) {
@@ -148,6 +193,8 @@ class GoogleAccountConnectionService {
         scopes: GoogleApiAuthService.supabaseGoogleApiScopes,
         queryParams: GoogleApiAuthService.googleOAuthQueryParams,
       );
+    } else if (requireLinkedIdentity) {
+      throw StateError('Connect Google from Account Settings first.');
     } else {
       await auth.linkIdentity(
         OAuthProvider.google,
@@ -244,6 +291,11 @@ class GoogleAccountConnectionService {
     final token = session?.providerToken?.trim();
     return token != null && token.isNotEmpty;
   }
+
+  Future<void> _clearAutoRenewAttempt(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_autoRenewKeyPrefix:$userId');
+  }
 }
 
 class GoogleAccountConnectionState {
@@ -261,7 +313,9 @@ class GoogleAccountConnectionState {
 
   bool get connected => account != null;
 
-  bool get readyNow => connected && sessionHasProviderToken;
+  bool get readyNow => connected;
+
+  bool get hasLiveAccess => connected && sessionHasProviderToken;
 
   String? get email {
     final stored = account?['account_email']?.toString().trim();
@@ -273,7 +327,7 @@ class GoogleAccountConnectionState {
 
   String get statusLabel {
     if (!connected) return 'Not connected';
-    if (readyNow) return 'Ready';
-    return 'Reconnect needed';
+    if (hasLiveAccess) return 'Connected';
+    return 'Connected';
   }
 }

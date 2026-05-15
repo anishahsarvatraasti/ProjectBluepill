@@ -28,6 +28,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<Map<String, dynamic>?>? _profileFuture;
   String? _profileUserId;
   String? _recordedGoogleConnectionKey;
+  String? _googleRenewalAttemptKey;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +41,7 @@ class _AuthGateState extends State<AuthGate> {
       builder: (context, snapshot) {
         final user = SupabaseService.currentUser;
         if (user == null) return const AuthPage();
-        _recordGoogleConnection(user);
+        _syncGoogleConnection(user);
 
         return FutureBuilder<Map<String, dynamic>?>(
           key: ValueKey(_profileReload),
@@ -106,16 +107,19 @@ class _AuthGateState extends State<AuthGate> {
     return maybeRow(response);
   }
 
-  void _recordGoogleConnection(User user) {
+  void _syncGoogleConnection(User user) {
     final session = SupabaseService.client.auth.currentSession;
     final key = '${user.id}:${session?.providerToken ?? ''}';
-    if (_recordedGoogleConnectionKey == key) return;
-    _recordedGoogleConnectionKey = key;
-    unawaited(
-      GoogleAccountConnectionService().recordCurrentSessionIfPossible(
-        source: 'auth_session',
-      ),
-    );
+    final service = GoogleAccountConnectionService();
+    if (_recordedGoogleConnectionKey != key) {
+      _recordedGoogleConnectionKey = key;
+      unawaited(service.recordCurrentSessionIfPossible(source: 'auth_session'));
+    }
+
+    final renewalKey = '${user.id}:${session?.accessToken ?? ''}';
+    if (_googleRenewalAttemptKey == renewalKey) return;
+    _googleRenewalAttemptKey = renewalKey;
+    unawaited(service.autoRenewConnectedSessionIfNeeded());
   }
 
   bool _needsOnboarding(Map<String, dynamic>? profile) {

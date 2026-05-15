@@ -891,6 +891,16 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
     });
   }
 
+  Future<void> _renewAccess() async {
+    await _run(() async {
+      await widget.service.signInAndAuthorize();
+      setState(() {
+        _accountEmail = widget.service.accountEmail;
+        _authorized = widget.service.isAuthorized;
+      });
+    });
+  }
+
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
       _busy = true;
@@ -943,7 +953,18 @@ class _GoogleTasksSyncDialogState extends State<_GoogleTasksSyncDialog> {
                     Text('Connected as $_accountEmail.'),
                     const SizedBox(height: 8),
                     const Text(
-                      'Reconnect Google from Settings > Account to refresh Tasks access.',
+                      'Google is still connected. Refresh access to sync Tasks in this session.',
+                    ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : _renewAccess,
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: ExpressiveLoadingIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.verified_user_outlined),
+                      label: const Text('Refresh access'),
                     ),
                   ] else ...[
                     Text('Connected as $_accountEmail.'),
