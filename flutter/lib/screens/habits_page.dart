@@ -27,7 +27,7 @@ class _HabitsPageState extends State<HabitsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _future = _load();
   }
 
@@ -69,6 +69,14 @@ class _HabitsPageState extends State<HabitsPage>
     setState(() {
       _future = _load();
     });
+  }
+
+  Color _statusColor(String? status, {bool muted = false}) {
+    final cs = Theme.of(context).colorScheme;
+    if (status == 'completed') return muted ? cs.primary : Colors.green;
+    if (status == 'partial') return Colors.orange;
+    if (status == 'missed') return Colors.red;
+    return cs.onSurfaceVariant;
   }
 
   Future<void> _logHabit(Map<String, dynamic> habit, String status) async {
@@ -114,14 +122,9 @@ class _HabitsPageState extends State<HabitsPage>
     _refresh();
 
     if (mounted) {
-      final verb = status == 'completed'
-          ? 'completed'
-          : status == 'partial'
-              ? 'partial'
-              : 'missed';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$verb — ${habit['title']}'),
+          content: Text('${_capitalize(status)} — ${habit['title']}'),
           duration: const Duration(seconds: 3),
           action: SnackBarAction(
             label: 'Undo',
@@ -146,6 +149,7 @@ class _HabitsPageState extends State<HabitsPage>
   }
 
   Future<void> _deleteHabit(Map<String, dynamic> habit) async {
+    final cs = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -158,7 +162,10 @@ class _HabitsPageState extends State<HabitsPage>
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              foregroundColor: cs.onError,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -335,8 +342,7 @@ class _HabitsPageState extends State<HabitsPage>
           controller: _tabController,
           tabs: const [
             Tab(text: 'Habits'),
-            Tab(text: 'Calendar'),
-            Tab(text: 'Stats'),
+            Tab(text: 'Overview'),
           ],
         ),
       ),
@@ -354,8 +360,7 @@ class _HabitsPageState extends State<HabitsPage>
             controller: _tabController,
             children: [
               _buildHabitsTab(data),
-              _buildCalendarTab(data),
-              _buildStatsTab(data),
+              _buildOverviewTab(data),
             ],
           );
         },
@@ -400,7 +405,6 @@ class _HabitsPageState extends State<HabitsPage>
       );
     }
 
-    // Group by category
     final grouped = <String, List<Map<String, dynamic>>>{};
     for (final h in filtered) {
       final cat = h['category']?.toString() ?? 'personal';
@@ -415,8 +419,7 @@ class _HabitsPageState extends State<HabitsPage>
         _buildStatsBanner(filtered, recentLogs),
         const SizedBox(height: 16),
         for (final cat in sortedCategories) ...[
-          _buildCategorySection(
-              cat, grouped[cat]!, recentLogs, todayLogs),
+          _buildCategorySection(cat, grouped[cat]!, recentLogs, todayLogs),
           const SizedBox(height: 8),
         ],
       ],
@@ -425,24 +428,26 @@ class _HabitsPageState extends State<HabitsPage>
 
   Widget _buildStatsBanner(
       List<Map<String, dynamic>> habits, List<Map<String, dynamic>> recentLogs) {
+    final cs = Theme.of(context).colorScheme;
     final total = habits.length;
-    final completed = recentLogs
-        .where((l) => l['status'] == 'completed')
-        .length;
+    final completed =
+        recentLogs.where((l) => l['status'] == 'completed').length;
     final missed = recentLogs.where((l) => l['status'] == 'missed').length;
     final rate = recentLogs.isEmpty
         ? 0
         : (completed / recentLogs.length * 100).round();
     final bestStreak = habits.fold<int>(
-        0, (max, h) => intValue(h['best_streak'] ?? h['current_streak']) > max
-            ? intValue(h['best_streak'] ?? h['current_streak'])
-            : max);
+        0,
+        (max, h) =>
+            intValue(h['best_streak'] ?? h['current_streak']) > max
+                ? intValue(h['best_streak'] ?? h['current_streak'])
+                : max);
 
     return BpCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          _buildStatCircle(rate, 'Rate', Colors.green),
+          _buildStatCircle(rate, 'Rate', cs.primary),
           const SizedBox(width: 16),
           Expanded(
             child: Row(
@@ -491,6 +496,7 @@ class _HabitsPageState extends State<HabitsPage>
   }
 
   Widget _buildStatColumn(String label, String value) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -504,7 +510,7 @@ class _HabitsPageState extends State<HabitsPage>
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: cs.onSurfaceVariant,
               ),
         ),
       ],
@@ -517,6 +523,7 @@ class _HabitsPageState extends State<HabitsPage>
     List<Map<String, dynamic>> recentLogs,
     List<Map<String, dynamic>> todayLogs,
   ) {
+    final cs = Theme.of(context).colorScheme;
     final expanded = _expandedCategories.contains(category);
     return Column(
       children: [
@@ -552,7 +559,7 @@ class _HabitsPageState extends State<HabitsPage>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: cs.primaryContainer,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -560,8 +567,7 @@ class _HabitsPageState extends State<HabitsPage>
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color:
-                          Theme.of(context).colorScheme.onPrimaryContainer,
+                      color: cs.onPrimaryContainer,
                     ),
                   ),
                 ),
@@ -583,10 +589,10 @@ class _HabitsPageState extends State<HabitsPage>
     List<Map<String, dynamic>> recentLogs,
     List<Map<String, dynamic>> todayLogs,
   ) {
+    final cs = Theme.of(context).colorScheme;
     final habitLogs = recentLogs.where((l) => l['habit_id'] == habit['id']);
-    final todayLog = todayLogs
-        .where((l) => l['habit_id'] == habit['id'])
-        .toList();
+    final todayLog =
+        todayLogs.where((l) => l['habit_id'] == habit['id']).toList();
     final status = todayLog.isEmpty ? null : todayLog.first['status'];
     final rate = intValue(habit['completion_rate']);
     final streak = intValue(habit['current_streak']);
@@ -611,11 +617,7 @@ class _HabitsPageState extends State<HabitsPage>
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
                       key: ValueKey(status),
-                      color: status == 'completed'
-                          ? Colors.green
-                          : status == 'partial'
-                              ? Colors.orange
-                              : Theme.of(context).colorScheme.primary,
+                      color: _statusColor(status),
                       size: 26,
                     ),
                   ),
@@ -637,9 +639,7 @@ class _HabitsPageState extends State<HabitsPage>
                         Text(
                           habit['target'].toString(),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: cs.onSurfaceVariant,
                               ),
                         ),
                     ],
@@ -669,10 +669,8 @@ class _HabitsPageState extends State<HabitsPage>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (streak > 0) ...[
-                          Text(
-                            '🔥',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
+                          Text('🔥',
+                              style: Theme.of(context).textTheme.bodyLarge),
                           const SizedBox(width: 2),
                         ],
                         Text(
@@ -705,29 +703,23 @@ class _HabitsPageState extends State<HabitsPage>
             Row(
               children: [
                 _buildLogButton(
-                  habit: habit,
                   label: 'Done',
                   icon: Icons.done,
                   isActive: status == 'completed',
-                  activeColor: Colors.green,
                   onTap: () => _logHabit(habit, 'completed'),
                 ),
                 const SizedBox(width: 6),
                 _buildLogButton(
-                  habit: habit,
                   label: 'Half',
                   icon: Icons.timelapse,
                   isActive: status == 'partial',
-                  activeColor: Colors.orange,
                   onTap: () => _logHabit(habit, 'partial'),
                 ),
                 const SizedBox(width: 6),
                 _buildLogButton(
-                  habit: habit,
                   label: 'Miss',
                   icon: Icons.close,
                   isActive: status == 'missed',
-                  activeColor: Colors.red,
                   onTap: () => _logHabit(habit, 'missed'),
                 ),
               ],
@@ -739,13 +731,17 @@ class _HabitsPageState extends State<HabitsPage>
   }
 
   Widget _buildLogButton({
-    required Map<String, dynamic> habit,
     required String label,
     required IconData icon,
     required bool isActive,
-    required Color activeColor,
     required VoidCallback onTap,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final color = isActive ? _statusColor(label == 'Done'
+        ? 'completed'
+        : label == 'Half'
+            ? 'partial'
+            : 'missed') : cs.onSurfaceVariant;
     return Expanded(
       child: isActive
           ? FilledButton.icon(
@@ -753,9 +749,8 @@ class _HabitsPageState extends State<HabitsPage>
               icon: Icon(icon, size: 16),
               label: Text(label),
               style: FilledButton.styleFrom(
-                backgroundColor: activeColor,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                backgroundColor: color,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                 minimumSize: Size.zero,
               ),
             )
@@ -764,8 +759,8 @@ class _HabitsPageState extends State<HabitsPage>
               icon: Icon(icon, size: 16),
               label: Text(label),
               style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                foregroundColor: cs.onSurfaceVariant,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                 minimumSize: Size.zero,
               ),
             ),
@@ -773,6 +768,7 @@ class _HabitsPageState extends State<HabitsPage>
   }
 
   Widget _buildMiniHeatmap(List<Map<String, dynamic>> logs) {
+    final cs = Theme.of(context).colorScheme;
     final today = DateTime.now();
     final logMap = <String, String>{};
     for (final l in logs) {
@@ -788,7 +784,7 @@ class _HabitsPageState extends State<HabitsPage>
         final day = today.subtract(Duration(days: 6 - i));
         final key = dateKey(day);
         final status = logMap[key];
-        Color color;
+        final Color color;
         if (status == 'completed') {
           color = Colors.green;
         } else if (status == 'partial') {
@@ -796,7 +792,7 @@ class _HabitsPageState extends State<HabitsPage>
         } else if (status == 'missed') {
           color = Colors.red.shade300;
         } else {
-          color = Theme.of(context).colorScheme.surfaceContainerHighest;
+          color = cs.surfaceContainerHighest;
         }
         final isToday = i == 6;
         return Padding(
@@ -829,266 +825,9 @@ class _HabitsPageState extends State<HabitsPage>
     );
   }
 
-  // --- Calendar Tab ---
+  // --- Overview Tab (heatmap strip + stats) ---
 
-  DateTime _calendarMonth = DateTime(DateTime.now().year, DateTime.now().month);
-  int? _selectedCalendarDay;
-
-  Widget _buildCalendarTab(Map<String, dynamic> data) {
-    final habits = data['habits'] as List<Map<String, dynamic>>;
-    final recentLogs = data['recent_logs'] as List<Map<String, dynamic>>;
-
-    final daysInMonth =
-        DateTime(_calendarMonth.year, _calendarMonth.month + 1, 0).day;
-    final firstWeekday =
-        DateTime(_calendarMonth.year, _calendarMonth.month, 1).weekday % 7;
-    final today = DateTime.now();
-    final isCurrentMonth = _calendarMonth.month == today.month &&
-        _calendarMonth.year == today.year;
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () =>
-                    setState(() => _calendarMonth = DateTime(
-                        _calendarMonth.year, _calendarMonth.month - 1)),
-              ),
-              Text(
-                DateFormat('MMMM yyyy').format(_calendarMonth),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () =>
-                    setState(() => _calendarMonth = DateTime(
-                        _calendarMonth.year, _calendarMonth.month + 1)),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-                .map((d) => Expanded(
-                      child: Center(
-                        child: Text(
-                          d,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              ),
-                        ),
-                      ),
-                    ))
-                .toList(),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: GridView.builder(
-              padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                childAspectRatio: 1,
-              ),
-              itemCount: firstWeekday + daysInMonth,
-              itemBuilder: (context, index) {
-                if (index < firstWeekday) {
-                  return const SizedBox.shrink();
-                }
-                final day = index - firstWeekday + 1;
-                final dateStr =
-                    dateKey(DateTime(_calendarMonth.year, _calendarMonth.month, day));
-                final dayLogs = recentLogs.where((l) => l['date'] == dateStr).toList();
-
-                final completed =
-                    dayLogs.where((l) => l['status'] == 'completed').length;
-                final missed =
-                    dayLogs.where((l) => l['status'] == 'missed').length;
-                final total = dayLogs.length;
-
-                final isToday = isCurrentMonth && day == today.day;
-                final isSelected = _selectedCalendarDay == day;
-
-                Color? bgColor;
-                if (total > 0 && completed == total) {
-                  bgColor = Colors.green.withValues(alpha: 0.25);
-                } else if (total > 0 && missed == total) {
-                  bgColor = Colors.red.withValues(alpha: 0.2);
-                } else if (total > 0) {
-                  bgColor = Colors.orange.withValues(alpha: 0.2);
-                }
-
-                return GestureDetector(
-                  onTap: () =>
-                      setState(() => _selectedCalendarDay =
-                          isSelected ? null : day),
-                  child: Container(
-                    margin: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: isToday
-                          ? Border.all(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 2)
-                          : isSelected
-                              ? Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  width: 1)
-                              : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          fontWeight:
-                              isToday ? FontWeight.w900 : FontWeight.w500,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        if (_selectedCalendarDay != null) ...[
-          const Divider(height: 1),
-          _buildDayDetail(
-            DateTime(
-                _calendarMonth.year, _calendarMonth.month, _selectedCalendarDay!),
-            recentLogs,
-            habits,
-          ),
-        ],
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _legendDot(Colors.green, 'Done'),
-              const SizedBox(width: 16),
-              _legendDot(Colors.orange, 'Partial'),
-              const SizedBox(width: 16),
-              _legendDot(Colors.red.shade300, 'Missed'),
-              const SizedBox(width: 16),
-              _legendDot(
-                  Theme.of(context).colorScheme.surfaceContainerHighest, 'None'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _legendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildDayDetail(
-    DateTime day,
-    List<Map<String, dynamic>> allLogs,
-    List<Map<String, dynamic>> habits,
-  ) {
-    final dateStr = dateKey(day);
-    final dayLogs = allLogs.where((l) => l['date'] == dateStr).toList();
-    final habitMap = {for (final h in habits) h['id'].toString(): h};
-
-    return SizedBox(
-      height: 160,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(
-              DateFormat('EEEE, MMMM d').format(day),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Expanded(
-            child: dayLogs.isEmpty
-                ? const Center(child: Text('No logs for this day'))
-                : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: dayLogs.map((l) {
-                      final h = habitMap[l['habit_id'].toString()];
-                      final title = h?['title']?.toString() ?? 'Unknown';
-                      final status = l['status'].toString();
-                      IconData icon;
-                      Color color;
-                      if (status == 'completed') {
-                        icon = Icons.check_circle;
-                        color = Colors.green;
-                      } else if (status == 'partial') {
-                        icon = Icons.timelapse;
-                        color = Colors.orange;
-                      } else {
-                        icon = Icons.cancel;
-                        color = Colors.red;
-                      }
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(icon, color: color, size: 20),
-                        title: Text(title),
-                        trailing: Text(
-                          _capitalize(status),
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Stats Tab ---
-
-  Widget _buildStatsTab(Map<String, dynamic> data) {
+  Widget _buildOverviewTab(Map<String, dynamic> data) {
     final habits = data['habits'] as List<Map<String, dynamic>>;
     final recentLogs = data['recent_logs'] as List<Map<String, dynamic>>;
 
@@ -1102,7 +841,127 @@ class _HabitsPageState extends State<HabitsPage>
       );
     }
 
-    // Per-habit stats
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      children: [
+        _buildHeatmapStrip(recentLogs),
+        const SizedBox(height: 12),
+        _buildStatsSection(habits, recentLogs),
+      ],
+    );
+  }
+
+  Widget _buildHeatmapStrip(List<Map<String, dynamic>> recentLogs) {
+    final cs = Theme.of(context).colorScheme;
+    final today = DateTime.now();
+    const days = 30;
+
+    final dayStats = <String, int>{}; // date -> 0=none, 1=mixed/partial, 2=all done, 3=all missed
+    for (int i = 0; i < days; i++) {
+      final d = today.subtract(Duration(days: days - 1 - i));
+      final key = dateKey(d);
+      final logs = recentLogs.where((l) => l['date'] == key).toList();
+      if (logs.isEmpty) {
+        dayStats[key] = 0;
+      } else {
+        final completed = logs.where((l) => l['status'] == 'completed').length;
+        final missed = logs.where((l) => l['status'] == 'missed').length;
+        if (completed == logs.length) {
+          dayStats[key] = 2;
+        } else if (missed == logs.length) {
+          dayStats[key] = 3;
+        } else {
+          dayStats[key] = 1;
+        }
+      }
+    }
+
+    return BpCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('30-day heatmap',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 3,
+            runSpacing: 3,
+            children: List.generate(days, (i) {
+              final d = today.subtract(Duration(days: days - 1 - i));
+              final key = dateKey(d);
+              final stat = dayStats[key] ?? 0;
+              final color = stat == 2
+                  ? cs.primary
+                  : stat == 1
+                      ? Colors.orange
+                      : stat == 3
+                          ? cs.error
+                          : cs.surfaceContainerHighest;
+              final isToday = i == days - 1;
+              return Container(
+                width: isToday ? 20 : 15,
+                height: isToday ? 20 : 15,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(3),
+                  border: isToday
+                      ? Border.all(color: cs.onSurface, width: 1.2)
+                      : null,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _legendDot(cs.primary, 'Done'),
+              const SizedBox(width: 12),
+              _legendDot(Colors.orange, 'Partial'),
+              const SizedBox(width: 12),
+              _legendDot(cs.error, 'Missed'),
+              const SizedBox(width: 12),
+              _legendDot(cs.surfaceContainerHighest, 'None'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 3),
+        Text(label,
+            style: Theme.of(context)
+                .textTheme
+                .labelSmall
+                ?.copyWith(fontWeight: FontWeight.w600, fontSize: 10)),
+      ],
+    );
+  }
+
+  // --- Stats section (within overview tab) ---
+
+  Widget _buildStatsSection(
+    List<Map<String, dynamic>> habits,
+    List<Map<String, dynamic>> recentLogs,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+
     final perHabit = <Map<String, dynamic>>[];
     for (final h in habits) {
       final hLogs =
@@ -1110,9 +969,8 @@ class _HabitsPageState extends State<HabitsPage>
       final completed = hLogs.where((l) => l['status'] == 'completed').length;
       final partial = hLogs.where((l) => l['status'] == 'partial').length;
       final missed = hLogs.where((l) => l['status'] == 'missed').length;
-      final rate = hLogs.isEmpty
-          ? 0.0
-          : (completed / hLogs.length * 100);
+      final rate =
+          hLogs.isEmpty ? 0.0 : (completed / hLogs.length * 100);
       perHabit.add({
         'habit': h,
         'total': hLogs.length,
@@ -1123,7 +981,8 @@ class _HabitsPageState extends State<HabitsPage>
       });
     }
 
-    perHabit.sort((a, b) => (b['rate'] as double).compareTo(a['rate'] as double));
+    perHabit
+        .sort((a, b) => (b['rate'] as double).compareTo(a['rate'] as double));
 
     final totalComplete =
         perHabit.fold<int>(0, (s, h) => s + (h['completed'] as int));
@@ -1135,154 +994,97 @@ class _HabitsPageState extends State<HabitsPage>
     final overallRate =
         grandTotal == 0 ? 0.0 : (totalComplete / grandTotal * 100);
 
-    // Category breakdown
     final catStats = <String, List<int>>{};
     for (final h in habits) {
       final cat = h['category']?.toString() ?? 'personal';
-      catStats.putIfAbsent(cat, () => [0, 0, 0]); // completed, partial, missed
+      catStats.putIfAbsent(cat, () => [0, 0, 0]);
     }
     for (final l in recentLogs) {
       final h = habits.where((x) => x['id'] == l['habit_id']).toList();
       if (h.isNotEmpty) {
         final cat = h.first['category']?.toString() ?? 'personal';
         final s = l['status'].toString();
-        if (s == 'completed') { catStats[cat]![0]++; } else if (s == 'partial') { catStats[cat]![1]++; } else if (s == 'missed') { catStats[cat]![2]++; }
+        if (s == 'completed') {
+          catStats[cat]![0]++;
+        } else if (s == 'partial') {
+          catStats[cat]![1]++;
+        } else if (s == 'missed') {
+          catStats[cat]![2]++;
+        }
       }
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        // Overall rate
-        BpCard(
-          child: Column(
-            children: [
-              const Text('Overall Completion',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 120,
-                      height: 120,
-                      child: CircularProgressIndicator(
-                        value: overallRate / 100,
-                        strokeWidth: 10,
-                        backgroundColor:
-                            Colors.green.withValues(alpha: 0.1),
-                        valueColor:
-                            const AlwaysStoppedAnimation(Colors.green),
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${overallRate.round()}%',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 28,
-                          ),
-                        ),
-                        Text(
-                          '$totalComplete / $grandTotal',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _statChip('$totalComplete', 'Done', Colors.green),
-                  _statChip('$totalPartial', 'Partial', Colors.orange),
-                  _statChip('$totalMissed', 'Missed', Colors.red),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Category breakdown
-        BpCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Category Breakdown',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              const SizedBox(height: 12),
-              for (final entry in catStats.entries) ...[
-                _buildCategoryBar(entry.key, entry.value[0],
-                    entry.value[1], entry.value[2]),
-                const SizedBox(height: 10),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Habit ranking
-        BpCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Habit Ranking',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              const SizedBox(height: 12),
-              for (int i = 0; i < perHabit.length; i++) ...[
-                _buildHabitRankRow(i, perHabit[i]),
-                if (i < perHabit.length - 1) const Divider(height: 1),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Streaks overview
-        BpCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Streaks',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              const SizedBox(height: 12),
-              for (final h in habits) ...[
-                Row(
-                  children: [
-                    Text(h['title'].toString()),
-                    const Spacer(),
-                    if (intValue(h['current_streak']) > 0) ...[
-                      Text('🔥 ',
-                          style: Theme.of(context).textTheme.bodyLarge),
-                    ],
-                    Text(
-                      '${intValue(h['current_streak'])} days',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: intValue(h['current_streak']) > 0
-                            ? Colors.orange
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 80),
+        _buildOverallRateCard(overallRate, totalComplete, grandTotal, cs),
+        const SizedBox(height: 8),
+        _buildCategoryBreakdownCard(catStats, cs),
+        const SizedBox(height: 8),
+        _buildHabitRankingCard(perHabit, cs),
+        const SizedBox(height: 8),
+        _buildStreaksCard(habits, cs),
       ],
+    );
+  }
+
+  Widget _buildOverallRateCard(
+      double rate, int done, int total, ColorScheme cs) {
+    return BpCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: CircularProgressIndicator(
+                    value: rate / 100,
+                    strokeWidth: 5,
+                    backgroundColor: cs.primary.withValues(alpha: 0.1),
+                    valueColor: AlwaysStoppedAnimation(cs.primary),
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${rate.round()}%',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: cs.primary,
+                      ),
+                    ),
+                    Text(
+                      '$done/$total',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _statChip('$done', 'Done', cs.primary),
+                _statChip('$total', 'Total', cs.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1291,19 +1093,40 @@ class _HabitsPageState extends State<HabitsPage>
       children: [
         Text(value,
             style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-                color: color)),
+                fontWeight: FontWeight.w900, fontSize: 14, color: color)),
         Text(label,
             style: TextStyle(
-                fontSize: 12,
+                fontSize: 9,
                 color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ],
     );
   }
 
+  Widget _buildCategoryBreakdownCard(
+      Map<String, List<int>> catStats, ColorScheme cs) {
+    return BpCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Category Breakdown',
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          for (final entry in catStats.entries) ...[
+            _buildCategoryBar(entry.key, entry.value[0], entry.value[1],
+                entry.value[2], cs),
+            const SizedBox(height: 6),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildCategoryBar(
-      String category, int completed, int partial, int missed) {
+      String category, int completed, int partial, int missed, ColorScheme cs) {
     final total = completed + partial + missed;
     if (total == 0) return const SizedBox.shrink();
     final cFrac = completed / total;
@@ -1316,24 +1139,29 @@ class _HabitsPageState extends State<HabitsPage>
         Row(
           children: [
             Text(_capitalize(category),
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const Spacer(),
             Text('${(cFrac * 100).round()}%',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: Colors.green)),
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
+                    color: cs.primary)),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(2),
           child: SizedBox(
-            height: 8,
+            height: 4,
             child: Row(
               children: [
                 if (cFrac > 0)
                   Flexible(
                       flex: (cFrac * 100).round(),
-                      child: Container(color: Colors.green)),
+                      child: Container(color: cs.primary)),
                 if (pFrac > 0)
                   Flexible(
                       flex: (pFrac * 100).round(),
@@ -1341,7 +1169,7 @@ class _HabitsPageState extends State<HabitsPage>
                 if (mFrac > 0)
                   Flexible(
                       flex: (mFrac * 100).round(),
-                      child: Container(color: Colors.red.shade300)),
+                      child: Container(color: cs.error)),
               ],
             ),
           ),
@@ -1350,56 +1178,124 @@ class _HabitsPageState extends State<HabitsPage>
     );
   }
 
-  Widget _buildHabitRankRow(int index, Map<String, dynamic> stats) {
+  Widget _buildHabitRankingCard(
+      List<Map<String, dynamic>> perHabit, ColorScheme cs) {
+    return BpCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Habit Ranking',
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          for (int i = 0; i < perHabit.length; i++) ...[
+            _buildHabitRankRow(i, perHabit[i], cs),
+            if (i < perHabit.length - 1)
+              Divider(height: 1, color: cs.outlineVariant),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHabitRankRow(
+      int index, Map<String, dynamic> stats, ColorScheme cs) {
     final h = stats['habit'] as Map<String, dynamic>;
     final rate = stats['rate'] as double;
+    final barColor = rate >= 70
+        ? cs.primary
+        : rate >= 40
+            ? Colors.orange
+            : cs.error;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           SizedBox(
-            width: 24,
+            width: 16,
             child: Text('${index + 1}',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 10,
+                  color: cs.onSurfaceVariant,
                 )),
           ),
           Expanded(
             child: Text(h['title'].toString(),
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
           ),
-          SizedBox(
-            width: 60,
-            child: LinearProgressIndicator(
-              value: rate / 100,
-              backgroundColor: Colors.green.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation(
-                rate >= 70
-                    ? Colors.green
-                    : rate >= 40
-                        ? Colors.orange
-                        : Colors.red,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
           SizedBox(
             width: 40,
+            child: LinearProgressIndicator(
+              value: rate / 100,
+              backgroundColor: cs.primaryContainer,
+              valueColor: AlwaysStoppedAnimation(barColor),
+              minHeight: 4,
+            ),
+          ),
+          const SizedBox(width: 4),
+          SizedBox(
+            width: 28,
             child: Text(
               '${rate.round()}%',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: rate >= 70
-                    ? Colors.green
-                    : rate >= 40
-                        ? Colors.orange
-                        : Colors.red,
+                fontSize: 9,
+                color: barColor,
               ),
               textAlign: TextAlign.right,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreaksCard(List<Map<String, dynamic>> habits, ColorScheme cs) {
+    return BpCard(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Streaks',
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          for (final h in habits) ...[
+            Row(
+              children: [
+                Text(h['title'].toString(),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(fontWeight: FontWeight.w600)),
+                const Spacer(),
+                if (intValue(h['current_streak']) > 0)
+                  Text('🔥 ',
+                      style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  '${intValue(h['current_streak'])}d',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    color: intValue(h['current_streak']) > 0
+                        ? Colors.orange
+                        : cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
         ],
       ),
     );
@@ -1410,6 +1306,10 @@ class _HabitsPageState extends State<HabitsPage>
     return s[0].toUpperCase() + s.substring(1);
   }
 }
+
+// ────────────────────────────────────────────────────────────
+// Habit Detail Page
+// ────────────────────────────────────────────────────────────
 
 class _HabitDetailPage extends StatefulWidget {
   final Map<String, dynamic> habit;
@@ -1434,30 +1334,26 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
     return DateTime(now.year, now.month + _selectedMonthOffset);
   }
 
+  Color _statusColor(String? status) {
+    if (status == 'completed') return Colors.green;
+    if (status == 'partial') return Colors.orange;
+    if (status == 'missed') return Colors.red;
+    return Theme.of(context).colorScheme.onSurfaceVariant;
+  }
+
   @override
   Widget build(BuildContext context) {
     final h = widget.habit;
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final rate = intValue(h['completion_rate']);
     final streak = intValue(h['current_streak']);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(h['title'].toString()),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              // Reuse the edit logic via parent callback
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(h['title'].toString())),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Header card
           BpCard(
             child: Column(
               children: [
@@ -1473,10 +1369,8 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
                         child: CircularProgressIndicator(
                           value: rate / 100,
                           strokeWidth: 8,
-                          backgroundColor:
-                              Colors.green.withValues(alpha: 0.1),
-                          valueColor:
-                              const AlwaysStoppedAnimation(Colors.green),
+                          backgroundColor: cs.primary.withValues(alpha: 0.1),
+                          valueColor: AlwaysStoppedAnimation(cs.primary),
                         ),
                       ),
                       Column(
@@ -1484,18 +1378,16 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
                         children: [
                           Text(
                             '$rate%',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 22,
+                              color: cs.primary,
                             ),
                           ),
-                          Text(
-                            'rate',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+                          Text('rate',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: cs.onSurfaceVariant)),
                         ],
                       ),
                     ],
@@ -1528,8 +1420,6 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Monthly heatmap
           BpCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1537,84 +1427,95 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Monthly Log',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text('Monthly Log',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w800)),
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left, size: 20),
-                          onPressed: () => setState(
-                              () => _selectedMonthOffset--),
+                          icon: const Icon(Icons.chevron_left, size: 18),
+                          onPressed: () =>
+                              setState(() => _selectedMonthOffset--),
                           constraints: const BoxConstraints(
-                              minWidth: 32, minHeight: 32),
+                              minWidth: 28, minHeight: 28),
+                          padding: EdgeInsets.zero,
                         ),
                         Text(
                           DateFormat('MMM yyyy').format(_viewMonth),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right, size: 20),
-                          onPressed: () => setState(
-                              () => _selectedMonthOffset++),
+                          icon: const Icon(Icons.chevron_right, size: 18),
+                          onPressed: () =>
+                              setState(() => _selectedMonthOffset++),
                           constraints: const BoxConstraints(
-                              minWidth: 32, minHeight: 32),
+                              minWidth: 28, minHeight: 28),
+                          padding: EdgeInsets.zero,
                         ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                _buildMonthGrid(h),
+                _buildMonthGrid(h, cs),
               ],
             ),
           ),
           const SizedBox(height: 16),
-
-          // Recent logs
           BpCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Recent Activity',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 16)),
+                Text('Recent Activity',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 ...widget.logs.take(20).map((l) {
                   final status = l['status'].toString();
                   final date = l['date'].toString();
-                  IconData icon;
-                  Color color;
-                  if (status == 'completed') {
-                    icon = Icons.check_circle;
-                    color = Colors.green;
-                  } else if (status == 'partial') {
-                    icon = Icons.timelapse;
-                    color = Colors.orange;
-                  } else {
-                    icon = Icons.cancel;
-                    color = Colors.red;
-                  }
                   final dt = DateTime.tryParse(date);
                   return ListTile(
                     dense: true,
-                    leading: Icon(icon, color: color, size: 20),
-                    title: Text(dt != null
-                        ? DateFormat('MMM d, yyyy').format(dt)
-                        : date),
+                    visualDensity: VisualDensity.compact,
+                    leading: Icon(
+                        status == 'completed'
+                            ? Icons.check_circle
+                            : status == 'partial'
+                                ? Icons.timelapse
+                                : Icons.cancel,
+                        color: _statusColor(status),
+                        size: 18),
+                    title: Text(
+                        dt != null
+                            ? DateFormat('MMM d, yyyy').format(dt)
+                            : date,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                     trailing: Text(
                       _capitalize(status),
                       style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w600,
+                        color: _statusColor(status),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
                       ),
                     ),
                   );
                 }),
                 if (widget.logs.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: Text('No logs yet')),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                        child: Text('No logs yet',
+                            style: Theme.of(context).textTheme.bodySmall)),
                   ),
               ],
             ),
@@ -1640,14 +1541,14 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
     );
   }
 
-  Widget _buildMonthGrid(Map<String, dynamic> habit) {
+  Widget _buildMonthGrid(Map<String, dynamic> habit, ColorScheme cs) {
     final daysInMonth =
         DateTime(_viewMonth.year, _viewMonth.month + 1, 0).day;
     final firstWeekday =
         DateTime(_viewMonth.year, _viewMonth.month, 1).weekday % 7;
     final today = DateTime.now();
-    final isCurrentMonth = _viewMonth.month == today.month &&
-        _viewMonth.year == today.year;
+    final isCurrentMonth =
+        _viewMonth.month == today.month && _viewMonth.year == today.year;
 
     final logMap = <int, String>{};
     for (final l in widget.logs) {
@@ -1663,47 +1564,47 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
     }
 
     final children = <Widget>[];
-    // Day-of-week headers
     for (final d in ['S', 'M', 'T', 'W', 'T', 'F', 'S']) {
       children.add(Center(
-        child: Text(
-          d,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
+        child: Text(d,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: cs.onSurfaceVariant,
+            )),
       ));
     }
-    // Empty cells
     for (int i = 0; i < firstWeekday; i++) {
       children.add(const SizedBox.shrink());
     }
-    // Day cells
     for (int day = 1; day <= daysInMonth; day++) {
       final status = logMap[day];
       Color? color;
-      if (status == 'completed') { color = Colors.green; } else if (status == 'partial') { color = Colors.orange; } else if (status == 'missed') { color = Colors.red.shade300; }
+      if (status == 'completed') {
+        color = cs.primary;
+      } else if (status == 'partial') {
+        color = Colors.orange;
+      } else if (status == 'missed') {
+        color = cs.error;
+      }
 
       final isToday = isCurrentMonth && day == today.day;
 
       children.add(
         Container(
-          margin: const EdgeInsets.all(2),
+          margin: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
             color: color?.withValues(alpha: 0.25),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(4),
             border: isToday
-                ? Border.all(
-                    color: Theme.of(context).colorScheme.primary, width: 2)
+                ? Border.all(color: cs.primary, width: 1.5)
                 : null,
           ),
           child: Center(
             child: Text(
               '$day',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: isToday ? FontWeight.w900 : FontWeight.w500,
               ),
             ),
@@ -1717,7 +1618,7 @@ class _HabitDetailPageState extends State<_HabitDetailPage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        childAspectRatio: 1,
+        childAspectRatio: 0.85,
       ),
       children: children,
     );
