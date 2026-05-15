@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'calendar_page.dart';
+import 'cron_jobs_page.dart';
 import 'dashboard_page.dart';
 import 'habits_page.dart';
 import 'agent_page.dart';
 import 'mission_page.dart';
-import 'progress_page.dart';
 import 'settings_page.dart';
 import 'todo_page.dart';
 import '../ui/project_logo.dart';
@@ -22,15 +22,15 @@ class _MainShellState extends State<MainShell> {
 
   static const _items = [
     _NavItem('Dashboard', Icons.space_dashboard_outlined, DashboardPage()),
-    _NavItem('Progress', Icons.show_chart_outlined, ProgressPage()),
+    _NavItem('Mission', Icons.flag_outlined, MissionPage()),
     _NavItem('Todo', Icons.check_circle_outline, TodoPage()),
     _NavItem('Calendar', Icons.calendar_month_outlined, CalendarPage()),
-    _NavItem('Mission', Icons.flag_outlined, MissionPage()),
     _NavItem('Habits', Icons.repeat, HabitsPage()),
+    _NavItem('Cron Jobs', Icons.schedule_send_outlined, CronJobsPage()),
     _NavItem('Agent', Icons.support_agent_outlined, AgentPage()),
     _NavItem('Settings', Icons.settings_outlined, SettingsPage()),
   ];
-  static const _mobilePrimaryIndexes = [0, 2, 3, 6];
+  static const _mobilePrimaryIndexes = [0, 1, 2, 5];
 
   @override
   Widget build(BuildContext context) {
@@ -108,10 +108,9 @@ class _MainShellState extends State<MainShell> {
             children: [
               Text(
                 'More',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w900),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               for (final index in secondaryIndexes)
@@ -167,19 +166,15 @@ class _DesktopSidebar extends StatelessWidget {
                           'BluePill',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         Text(
                           'Command center',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -230,8 +225,9 @@ class _DesktopNavButton extends StatelessWidget {
             : Colors.transparent,
       ),
     );
-    final background =
-        selected ? colorScheme.secondaryContainer : Colors.transparent;
+    final background = selected
+        ? colorScheme.secondaryContainer
+        : Colors.transparent;
     final foreground = selected
         ? colorScheme.onSecondaryContainer
         : colorScheme.onSurfaceVariant;
@@ -248,10 +244,7 @@ class _DesktopNavButton extends StatelessWidget {
             duration: const Duration(milliseconds: 180),
             curve: Easing.emphasizedDecelerate,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            decoration: ShapeDecoration(
-              color: background,
-              shape: shape,
-            ),
+            decoration: ShapeDecoration(color: background, shape: shape),
             child: Row(
               children: [
                 Icon(item.icon, color: foreground, size: 22),
@@ -315,10 +308,7 @@ class _MoreDestinationTile extends StatelessWidget {
 }
 
 class _AnimatedPage extends StatelessWidget {
-  const _AnimatedPage({
-    required this.index,
-    required this.child,
-  });
+  const _AnimatedPage({required this.index, required this.child});
 
   final int index;
   final Widget child;
@@ -337,16 +327,10 @@ class _AnimatedPage extends StatelessWidget {
         ).animate(animation);
         return FadeTransition(
           opacity: animation,
-          child: SlideTransition(
-            position: offset,
-            child: child,
-          ),
+          child: SlideTransition(position: offset, child: child),
         );
       },
-      child: KeyedSubtree(
-        key: ValueKey(index),
-        child: child,
-      ),
+      child: KeyedSubtree(key: ValueKey(index), child: child),
     );
   }
 }
