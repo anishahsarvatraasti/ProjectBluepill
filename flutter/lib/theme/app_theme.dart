@@ -1,36 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:m3e_core/m3e_core.dart';
 
 class AppTheme {
-  static const _blue = Color(0xFF3D7EFF);
-  static const _darkBlue = Color(0xFF3D7EFF);
-  static const _green = Color(0xFF00C853);
-  static const _darkGreen = Color(0xFF00C853);
-  static const _red = Color(0xFFFF3D71);
-  static const _darkRed = Color(0xFFFF3D71);
-  static const _lightBackground = Color(0xFFF5F7FB);
-  static const _lightSurface = Color(0xFFFFFFFF);
-  static const _lightSurfaceAlt = Color(0xFFF8FAFC);
-  static const _lightSurfaceContainer = Color(0xFFF1F5F9);
-  static const _lightSurfaceContainerHigh = Color(0xFFEFF2F7);
-  static const _lightSurfaceContainerHighest = Color(0xFFE2E8F0);
-  static const _lightBorder = Color(0xFFE2E8F0);
+  static const _blue = Color(0xFF2563EB);
   static const _lightText = Color(0xFF111827);
   static const _lightMutedText = Color(0xFF475569);
-  static const _darkBackground = Color(0xFF090D16);
-  static const _darkSurface = Color(0xFF111827);
-  static const _darkSurfaceAlt = Color(0xFF172033);
-  static const _darkSurfaceContainer = Color(0xFF1E293B);
-  static const _darkSurfaceContainerHigh = Color(0xFF22314A);
-  static const _darkSurfaceContainerHighest = Color(0xFF26344B);
-  static const _darkBorder = Color(0xFF26344B);
   static const _darkText = Color(0xFFE5E7EB);
   static const _darkMutedText = Color(0xFFCBD5E1);
 
   static const _radiusSmall = BorderRadius.all(Radius.circular(10));
   static const _radiusMedium = BorderRadius.all(Radius.circular(16));
-  static const _radiusLarge = BorderRadius.all(Radius.circular(22));
-  static const _radiusXLarge = BorderRadius.all(Radius.circular(28));
+  static const _radiusLarge = BorderRadius.all(Radius.circular(24));
+  static const _radiusXLarge = BorderRadius.all(Radius.circular(32));
   static const _quickMotion = Duration(milliseconds: 180);
+  static const motionFast = M3EMotion.expressiveSpatialFast;
+  static const motionDefault = M3EMotion.expressiveSpatialDefault;
 
   static const _buttonShape = RoundedSuperellipseBorder(
     borderRadius: _radiusMedium,
@@ -76,8 +60,8 @@ class AppTheme {
       textTheme: textTheme,
       primaryTextTheme: textTheme,
       hoverColor: colorScheme.primary.withValues(alpha: 0.10),
-      focusColor: colorScheme.secondary.withValues(alpha: 0.14),
-      highlightColor: colorScheme.tertiary.withValues(alpha: 0.10),
+      focusColor: colorScheme.tertiary.withValues(alpha: 0.14),
+      highlightColor: colorScheme.secondary.withValues(alpha: 0.10),
       splashColor: colorScheme.primary.withValues(alpha: 0.10),
       dividerColor: borderColor,
       dividerTheme: DividerThemeData(color: borderColor, thickness: 1),
@@ -105,14 +89,14 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: isDark ? 0.42 : 0.12),
         surfaceTintColor: colorScheme.surfaceTint.withValues(alpha: 0.36),
         margin: EdgeInsets.zero,
-        shape: _surfaceShape(borderColor, radius: 22),
+        shape: _surfaceShape(borderColor, radius: _radiusLarge.topLeft.x),
       ),
       inputDecorationTheme: _inputDecorationTheme(colorScheme, borderColor),
       listTileTheme: ListTileThemeData(
         iconColor: colorScheme.onSurfaceVariant,
         textColor: colorScheme.onSurface,
-        selectedColor: colorScheme.onSecondaryContainer,
-        selectedTileColor: colorScheme.secondaryContainer,
+        selectedColor: colorScheme.onTertiaryContainer,
+        selectedTileColor: colorScheme.tertiaryContainer,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         minTileHeight: 54,
         shape: _surfaceShape(Colors.transparent, radius: 18),
@@ -125,11 +109,11 @@ class AppTheme {
         backgroundColor: colorScheme.surfaceContainerLow,
         elevation: 0,
         useIndicator: true,
-        indicatorColor: colorScheme.secondaryContainer,
+        indicatorColor: colorScheme.tertiaryContainer,
         indicatorShape: _indicatorShape,
         minWidth: 104,
         selectedIconTheme: IconThemeData(
-          color: colorScheme.onSecondaryContainer,
+          color: colorScheme.onTertiaryContainer,
           size: 30,
         ),
         unselectedIconTheme: IconThemeData(
@@ -137,7 +121,7 @@ class AppTheme {
           size: 25,
         ),
         selectedLabelTextStyle: textTheme.labelMedium?.copyWith(
-          color: colorScheme.onSecondaryContainer,
+          color: colorScheme.onTertiaryContainer,
           fontWeight: FontWeight.w900,
         ),
         unselectedLabelTextStyle: textTheme.labelMedium?.copyWith(
@@ -147,7 +131,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colorScheme.surfaceContainerLow,
-        indicatorColor: colorScheme.secondaryContainer,
+        indicatorColor: colorScheme.tertiaryContainer,
         indicatorShape: _indicatorShape,
         height: 78,
         elevation: 0,
@@ -160,7 +144,7 @@ class AppTheme {
           return IconThemeData(
             size: selected ? 29 : 25,
             color: selected
-                ? colorScheme.onSecondaryContainer
+                ? colorScheme.onTertiaryContainer
                 : colorScheme.onSurfaceVariant,
           );
         }),
@@ -168,7 +152,7 @@ class AppTheme {
           final selected = states.contains(WidgetState.selected);
           return textTheme.labelMedium?.copyWith(
             color: selected
-                ? colorScheme.onSecondaryContainer
+                ? colorScheme.onTertiaryContainer
                 : colorScheme.onSurfaceVariant,
             fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
           );
@@ -182,7 +166,7 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           disabledForegroundColor:
               colorScheme.onSurface.withValues(alpha: 0.38),
-          surfaceTintColor: colorScheme.surfaceTint,
+          surfaceTintColor: Colors.transparent,
           shadowColor: Colors.black.withValues(alpha: isDark ? 0.40 : 0.20),
           elevation: 2,
           minimumSize: const Size(64, 50),
@@ -203,7 +187,7 @@ class AppTheme {
               colorScheme.onSurface.withValues(alpha: 0.12),
           disabledForegroundColor:
               colorScheme.onSurface.withValues(alpha: 0.38),
-          surfaceTintColor: colorScheme.surfaceTint,
+          surfaceTintColor: Colors.transparent,
           shadowColor: Colors.black.withValues(alpha: isDark ? 0.40 : 0.18),
           elevation: 2,
           minimumSize: const Size(64, 50),
@@ -250,17 +234,17 @@ class AppTheme {
           disabledForegroundColor:
               colorScheme.onSurface.withValues(alpha: 0.38),
           hoverColor: colorScheme.primary.withValues(alpha: 0.10),
-          focusColor: colorScheme.secondary.withValues(alpha: 0.14),
-          highlightColor: colorScheme.tertiary.withValues(alpha: 0.14),
+          focusColor: colorScheme.tertiary.withValues(alpha: 0.14),
+          highlightColor: colorScheme.secondary.withValues(alpha: 0.14),
           shape: _surfaceShape(Colors.transparent, radius: 18),
         ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
           foregroundColor: colorScheme.onSurfaceVariant,
-          selectedForegroundColor: colorScheme.onSecondaryContainer,
+          selectedForegroundColor: colorScheme.onTertiaryContainer,
           backgroundColor: colorScheme.surfaceContainerLow,
-          selectedBackgroundColor: colorScheme.secondaryContainer,
+          selectedBackgroundColor: colorScheme.tertiaryContainer,
           disabledBackgroundColor:
               colorScheme.onSurface.withValues(alpha: 0.08),
           disabledForegroundColor:
@@ -278,10 +262,10 @@ class AppTheme {
             return colorScheme.onSurface.withValues(alpha: 0.08);
           }
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.secondaryContainer;
+            return colorScheme.tertiaryContainer;
           }
           if (states.contains(WidgetState.pressed)) {
-            return colorScheme.tertiaryContainer.withValues(alpha: 0.72);
+            return colorScheme.secondaryContainer;
           }
           if (states.contains(WidgetState.hovered)) {
             return colorScheme.primaryContainer.withValues(alpha: 0.56);
@@ -291,13 +275,13 @@ class AppTheme {
         side: BorderSide(color: borderColor),
         shape: _chipShape,
         showCheckmark: true,
-        checkmarkColor: colorScheme.onSecondaryContainer,
+        checkmarkColor: colorScheme.onTertiaryContainer,
         labelStyle: textTheme.labelMedium?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w800,
         ),
         secondaryLabelStyle: textTheme.labelMedium?.copyWith(
-          color: colorScheme.onSecondaryContainer,
+          color: colorScheme.onTertiaryContainer,
           fontWeight: FontWeight.w900,
         ),
         iconTheme: IconThemeData(color: colorScheme.primary, size: 18),
@@ -310,12 +294,12 @@ class AppTheme {
         focusElevation: 2,
         hoverElevation: 4,
         highlightElevation: 4,
-        shape: const RoundedSuperellipseBorder(borderRadius: _radiusLarge),
+        shape: _buttonShape,
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
         surfaceTintColor: colorScheme.surfaceTint,
-        shape: _surfaceShape(borderColor, radius: 28),
+        shape: _surfaceShape(borderColor, radius: _radiusXLarge.topLeft.x),
         elevation: 2,
         shadowColor: Colors.black.withValues(alpha: isDark ? 0.48 : 0.16),
       ),
@@ -452,7 +436,7 @@ class AppTheme {
         ),
         backgroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.tertiaryContainer.withValues(alpha: 0.46);
+            return colorScheme.tertiaryContainer;
           }
           return Colors.transparent;
         }),
@@ -461,9 +445,9 @@ class AppTheme {
       sliderTheme: SliderThemeData(
         activeTrackColor: colorScheme.primary,
         inactiveTrackColor: colorScheme.surfaceContainerHighest,
-        secondaryActiveTrackColor: colorScheme.secondary,
-        thumbColor: colorScheme.tertiary,
-        overlayColor: colorScheme.tertiary.withValues(alpha: 0.14),
+        secondaryActiveTrackColor: colorScheme.tertiary,
+        thumbColor: colorScheme.primary,
+        overlayColor: colorScheme.primary.withValues(alpha: 0.14),
         valueIndicatorColor: colorScheme.inverseSurface,
         valueIndicatorTextStyle: textTheme.labelLarge?.copyWith(
           color: colorScheme.onInverseSurface,
@@ -472,7 +456,6 @@ class AppTheme {
         showValueIndicator: ShowValueIndicator.onlyForDiscrete,
         trackHeight: 6,
         trackGap: 6,
-        // ignore: deprecated_member_use
         year2023: false,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
@@ -486,19 +469,18 @@ class AppTheme {
         borderRadius: const BorderRadius.all(Radius.circular(99)),
         stopIndicatorColor: colorScheme.tertiary,
         stopIndicatorRadius: 3,
-        // ignore: deprecated_member_use
         year2023: false,
       ),
       tabBarTheme: TabBarThemeData(
         dividerColor: Colors.transparent,
-        labelColor: colorScheme.onSecondaryContainer,
+        labelColor: colorScheme.onTertiaryContainer,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
         labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
         unselectedLabelStyle:
             textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: ShapeDecoration(
-          color: colorScheme.secondaryContainer,
+          color: colorScheme.tertiaryContainer,
           shape: _surfaceShape(Colors.transparent, radius: 18),
         ),
       ),
@@ -512,14 +494,14 @@ class AppTheme {
         surfaceTintColor: colorScheme.surfaceTint,
         headerBackgroundColor: colorScheme.primaryContainer,
         headerForegroundColor: colorScheme.onPrimaryContainer,
-        shape: _surfaceShape(borderColor, radius: 28),
+        shape: _surfaceShape(borderColor, radius: _radiusXLarge.topLeft.x),
         dayShape: const WidgetStatePropertyAll<OutlinedBorder>(CircleBorder()),
         yearShape: const WidgetStatePropertyAll<OutlinedBorder>(_buttonShape),
         todayBorder: BorderSide(color: colorScheme.tertiary, width: 1.6),
         todayForegroundColor:
             WidgetStatePropertyAll<Color>(colorScheme.tertiary),
         todayBackgroundColor: WidgetStatePropertyAll<Color>(
-          colorScheme.tertiaryContainer.withValues(alpha: 0.42),
+          colorScheme.tertiaryContainer,
         ),
         inputDecorationTheme: _inputDecorationTheme(colorScheme, borderColor),
         confirmButtonStyle: FilledButton.styleFrom(shape: _buttonShape),
@@ -527,9 +509,9 @@ class AppTheme {
       ),
       timePickerTheme: TimePickerThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
-        shape: _surfaceShape(borderColor, radius: 28),
-        dayPeriodColor: colorScheme.secondaryContainer,
-        dayPeriodTextColor: colorScheme.onSecondaryContainer,
+        shape: _surfaceShape(borderColor, radius: _radiusXLarge.topLeft.x),
+        dayPeriodColor: colorScheme.tertiaryContainer,
+        dayPeriodTextColor: colorScheme.onTertiaryContainer,
         dayPeriodBorderSide: BorderSide(color: borderColor),
         dayPeriodShape: _buttonShape,
         dialBackgroundColor: colorScheme.surfaceContainerHighest,
@@ -559,66 +541,16 @@ class AppTheme {
 
   static ColorScheme _expressiveColorScheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final base = ColorScheme.fromSeed(
-      seedColor: isDark ? _darkBlue : _blue,
+    return ColorScheme.fromSeed(
+      seedColor: _blue,
       brightness: brightness,
       dynamicSchemeVariant: DynamicSchemeVariant.expressive,
-      contrastLevel: 0.18,
-    );
-
-    return base.copyWith(
-      primary: isDark ? _darkBlue : _blue,
-      onPrimary: isDark ? const Color(0xFF1A2B3C) : const Color(0xFF1A2B3C),
-      primaryContainer:
-          isDark ? const Color(0xFF3C5A7A) : const Color(0xFFD2E3FC),
-      onPrimaryContainer:
-          isDark ? const Color(0xFFD2E3FC) : const Color(0xFF1A2B3C),
-      primaryFixed: const Color(0xFFD2E3FC),
-      primaryFixedDim: const Color(0xFFA8C7FA),
-      onPrimaryFixed: const Color(0xFF1A2B3C),
-      onPrimaryFixedVariant: const Color(0xFF4A7ABC),
-      secondary: isDark ? _darkGreen : _green,
-      onSecondary: isDark ? const Color(0xFF1A2E1A) : const Color(0xFF1A2E1A),
-      secondaryContainer:
-          isDark ? const Color(0xFF3A6B4A) : const Color(0xFFD4EDDA),
-      onSecondaryContainer:
-          isDark ? const Color(0xFFD4EDDA) : const Color(0xFF1A2E1A),
-      secondaryFixed: const Color(0xFFD4EDDA),
-      secondaryFixedDim: const Color(0xFFA8D8B5),
-      onSecondaryFixed: const Color(0xFF1A2E1A),
-      onSecondaryFixedVariant: const Color(0xFF4A8B5A),
-      tertiary: isDark ? _darkRed : _red,
-      onTertiary: isDark ? const Color(0xFF2E1A1A) : const Color(0xFF2E1A1A),
-      tertiaryContainer:
-          isDark ? const Color(0xFF6B3A3A) : const Color(0xFFFCE4E2),
-      onTertiaryContainer:
-          isDark ? const Color(0xFFFCE4E2) : const Color(0xFF2E1A1A),
-      tertiaryFixed: const Color(0xFFFCE4E2),
-      tertiaryFixedDim: const Color(0xFFF5B8B3),
-      onTertiaryFixed: const Color(0xFF2E1A1A),
-      onTertiaryFixedVariant: const Color(0xFFBC4A42),
-      error: isDark ? _darkRed : _red,
-      onError: isDark ? const Color(0xFF2E1A1A) : const Color(0xFF2E1A1A),
-      errorContainer:
-          isDark ? const Color(0xFF6B3A3A) : const Color(0xFFFCE4E2),
-      onErrorContainer:
-          isDark ? const Color(0xFFFCE4E2) : const Color(0xFF2E1A1A),
-      surface: isDark ? _darkSurface : _lightSurface,
+      contrastLevel: 0.12,
+    ).copyWith(
       onSurface: isDark ? _darkText : _lightText,
-      surfaceDim: isDark ? _darkBackground : const Color(0xFFE5E7EB),
-      surfaceBright: isDark ? _darkSurfaceContainerHighest : _lightSurface,
-      surfaceContainerLowest: isDark ? _darkBackground : _lightBackground,
-      surfaceContainerLow: isDark ? _darkSurfaceAlt : _lightSurfaceAlt,
-      surfaceContainer: isDark ? _darkSurfaceContainer : _lightSurfaceContainer,
-      surfaceContainerHigh:
-          isDark ? _darkSurfaceContainerHigh : _lightSurfaceContainerHigh,
-      surfaceContainerHighest:
-          isDark ? _darkSurfaceContainerHighest : _lightSurfaceContainerHighest,
       onSurfaceVariant: isDark ? _darkMutedText : _lightMutedText,
-      outline: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-      outlineVariant: isDark ? _darkBorder : _lightBorder,
-      surfaceTint: isDark ? _darkBlue : _blue,
-      inversePrimary: isDark ? _blue : _darkBlue,
+      surfaceTint: _blue,
+      inversePrimary: _blue,
     );
   }
 
@@ -708,28 +640,28 @@ class AppTheme {
         color: color,
         fontSize: 56,
         fontWeight: FontWeight.w900,
-        letterSpacing: 0,
+        letterSpacing: -1.2,
         height: 1.02,
       ),
       displayMedium: TextStyle(
         color: color,
         fontSize: 44,
         fontWeight: FontWeight.w900,
-        letterSpacing: 0,
+        letterSpacing: -0.8,
         height: 1.05,
       ),
       displaySmall: TextStyle(
         color: color,
         fontSize: 36,
         fontWeight: FontWeight.w900,
-        letterSpacing: 0,
+        letterSpacing: -0.4,
         height: 1.08,
       ),
       headlineLarge: TextStyle(
         color: color,
         fontSize: 32,
         fontWeight: FontWeight.w900,
-        letterSpacing: 0,
+        letterSpacing: -0.2,
         height: 1.10,
       ),
       headlineMedium: TextStyle(
@@ -757,52 +689,95 @@ class AppTheme {
         color: color,
         fontSize: 16,
         fontWeight: FontWeight.w800,
-        letterSpacing: 0,
+        letterSpacing: 0.1,
         height: 1.25,
       ),
       titleSmall: TextStyle(
         color: color,
         fontSize: 14,
         fontWeight: FontWeight.w800,
-        letterSpacing: 0,
+        letterSpacing: 0.1,
         height: 1.25,
       ),
       bodyLarge: TextStyle(
         color: color,
         fontSize: 16,
-        height: 1.45,
-        letterSpacing: 0,
+        height: 1.50,
+        letterSpacing: 0.2,
       ),
       bodyMedium: TextStyle(
         color: color,
         fontSize: 14,
-        height: 1.45,
-        letterSpacing: 0,
+        height: 1.50,
+        letterSpacing: 0.15,
       ),
       bodySmall: TextStyle(
         color: muted,
         fontSize: 12,
-        height: 1.35,
-        letterSpacing: 0,
+        height: 1.40,
+        letterSpacing: 0.1,
       ),
       labelLarge: TextStyle(
         color: color,
         fontSize: 14,
         fontWeight: FontWeight.w900,
-        letterSpacing: 0,
+        letterSpacing: 0.3,
       ),
       labelMedium: TextStyle(
         color: color,
         fontSize: 12,
         fontWeight: FontWeight.w800,
-        letterSpacing: 0,
+        letterSpacing: 0.3,
       ),
       labelSmall: TextStyle(
         color: muted,
         fontSize: 11,
         fontWeight: FontWeight.w800,
-        letterSpacing: 0,
+        letterSpacing: 0.4,
       ),
     );
   }
+
+  static M3EButtonDecoration m3eFilledDecoration(ColorScheme scheme) =>
+      M3EButtonDecoration.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        borderRadius: 16,
+        motion: motionFast,
+      );
+
+  static M3EButtonDecoration m3eElevatedDecoration(ColorScheme scheme) =>
+      M3EButtonDecoration.styleFrom(
+        backgroundColor: scheme.surfaceContainerLow,
+        foregroundColor: scheme.primary,
+        borderRadius: 16,
+        motion: motionFast,
+      );
+
+  static M3EButtonDecoration m3eOutlinedDecoration(ColorScheme scheme) =>
+      M3EButtonDecoration.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: scheme.primary,
+        side: BorderSide(color: scheme.outline),
+        borderRadius: 16,
+        motion: motionFast,
+      );
+
+  static M3EButtonDecoration m3eTextDecoration(ColorScheme scheme) =>
+      M3EButtonDecoration.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: scheme.primary,
+        borderRadius: 16,
+        motion: motionFast,
+      );
+
+  static M3EToggleButtonDecoration m3eToggleDecoration(ColorScheme scheme) =>
+      M3EToggleButtonDecoration(
+        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
+        foregroundColor: WidgetStatePropertyAll(scheme.onSurfaceVariant),
+        borderRadius: 16,
+        checkedRadius: 8,
+        uncheckedRadius: 24,
+        motion: motionDefault,
+      );
 }

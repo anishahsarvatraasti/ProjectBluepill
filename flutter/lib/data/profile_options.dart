@@ -142,6 +142,46 @@ const interestOptions = [
   'Wellness',
 ];
 
+const identityStageOptions = [
+  ('🎓', 'Student', 'Student'),
+  ('💼', 'Early Career', 'early_career'),
+  ('🚀', 'Entrepreneur', 'entrepreneur'),
+  ('👨‍💼', 'Professional', 'professional'),
+  ('🌴', 'Planning Retirement', 'planning_retirement'),
+  ('✨', 'Something Else', 'something_else'),
+];
+
+const goalCategoryOptions = [
+  ('📈', 'Career Growth', 'Career Growth'),
+  ('💰', 'Financial Freedom', 'Financial Freedom'),
+  ('🏢', 'Start a Business', 'Start a Business'),
+  ('❤️', 'Relationships', 'Relationships'),
+  ('🏋️', 'Health', 'Health'),
+  ('🧠', 'Learn Skills', 'Learn Skills'),
+  ('🌍', 'Freedom', 'Freedom'),
+  ('⏰', 'Early Retirement', 'Early Retirement'),
+];
+
+const barrierOptions = [
+  ('😕', 'Lack of Direction', 'Lack of Direction'),
+  ('🔥', 'Motivation', 'Motivation'),
+  ('🎯', 'Consistency', 'Consistency'),
+  ('💪', 'Discipline', 'Discipline'),
+  ('😟', 'Confidence', 'Confidence'),
+  ('💵', 'Money', 'Money'),
+  ('⏳', 'Time', 'Time'),
+];
+
+const strengthOptions = [
+  'Problem Solving', 'Communication', 'Sales', 'Coding', 'Design',
+  'Leadership', 'Writing', 'Marketing', 'Learning Fast',
+];
+
+const skillsToLearnOptions = [
+  'AI', 'Programming', 'Investing', 'Leadership', 'Marketing',
+  'Sales', 'Entrepreneurship', 'Public Speaking',
+];
+
 String educationLabel(String value) {
   return switch (value) {
     'student' => 'Student',

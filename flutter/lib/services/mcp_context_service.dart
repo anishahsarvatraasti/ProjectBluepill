@@ -345,7 +345,7 @@ class McpContextService {
       return 'Protect your mission today with one recovery action and one reflection.';
     }
     final top = pending.take(2).map((task) => task['title']).join(' and ');
-    final mission = profile?['main_mission'];
+    final mission = profile?['dream_goal'];
     if (mission == null || mission.toString().trim().isEmpty) {
       return 'Complete your top 2 tasks before adding new work: $top.';
     }

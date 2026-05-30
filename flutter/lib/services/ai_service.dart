@@ -54,7 +54,7 @@ bool shouldUsePersonalContextForAgentMessage(
   ];
   final contextPatterns = [
     RegExp(r'\bmission\b'),
-    RegExp(r'\bdream goal\b'),
+    RegExp(r'\b(main|dream) goal\b'),
     RegExp(r'\bgoal(s)?\b'),
     RegExp(r'\btask(s)?\b'),
     RegExp(r'\bto-?do\b'),

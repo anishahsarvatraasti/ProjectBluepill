@@ -124,13 +124,14 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _needsOnboarding(Map<String, dynamic>? profile) {
     if (profile == null) return true;
-    final dreamGoal = profile['dream_goal'] ?? profile['main_mission'];
+    final newFieldsMissing = (profile['identity_stage']?.toString() ?? '').isEmpty;
     final requiredText = [
       profile['name'],
       profile['location_city'],
       profile['dob'],
-      dreamGoal,
+      profile['dream_goal'],
     ];
+    if (newFieldsMissing) return true;
     if (requiredText.any(
       (value) => value == null || value.toString().trim().isEmpty,
     )) {

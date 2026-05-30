@@ -24,6 +24,12 @@ class _SettingsPageState extends State<SettingsPage> {
   final _role = TextEditingController();
   final _yearlyGoal = TextEditingController();
   final _struggle = TextEditingController();
+  final _futureVision = TextEditingController();
+  final _successDefinition = TextEditingController();
+  List<String> _goalCategories = [];
+  List<String> _barriers = [];
+  List<String> _strengths = [];
+  List<String> _skillsToLearn = [];
   final _googleConnection = GoogleAccountConnectionService();
   DateTime? _dob;
   String _educationStatus = 'student';
@@ -51,6 +57,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _role.dispose();
     _yearlyGoal.dispose();
     _struggle.dispose();
+    _futureVision.dispose();
+    _successDefinition.dispose();
     super.dispose();
   }
 
@@ -293,7 +301,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             _sectionHeader(context, icon: Icons.flag_outlined, title: 'Goals'),
             const SizedBox(height: 14),
-            _field(_dreamGoal, 'Dream goal', lines: 3),
+            _field(_dreamGoal, 'Main goal', lines: 3),
             _field(_role, 'Current role'),
             _field(_yearlyGoal, 'Main goal this year'),
             _field(_struggle, 'Main struggle', lines: 2),
@@ -411,10 +419,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_hydrated || profile == null) return;
     _name.text = profile['name']?.toString() ?? '';
     _locationCity.text = profile['location_city']?.toString() ?? '';
-    _dreamGoal.text =
-        profile['dream_goal']?.toString() ??
-        profile['main_mission']?.toString() ??
-        '';
+    _dreamGoal.text = profile['dream_goal']?.toString() ?? '';
     _dob = DateTime.tryParse(profile['dob']?.toString() ?? '');
     final education = profile['education_status']?.toString();
     if (education != null && educationStatuses.contains(education)) {
@@ -426,6 +431,12 @@ class _SettingsPageState extends State<SettingsPage> {
     _yearlyGoal.text = profile['yearly_goal']?.toString() ?? '';
     _struggle.text = profile['main_struggle']?.toString() ?? '';
     _motivationStyle = profile['motivation_style']?.toString() ?? 'friendly';
+    _futureVision.text = profile['future_vision']?.toString() ?? '';
+    _successDefinition.text = profile['success_definition']?.toString() ?? '';
+    _goalCategories = _stringList(profile['goal_categories']);
+    _barriers = _stringList(profile['barriers']);
+    _strengths = _stringList(profile['strengths']);
+    _skillsToLearn = _stringList(profile['skills_to_learn']);
     _hydrated = true;
   }
 
@@ -441,13 +452,18 @@ class _SettingsPageState extends State<SettingsPage> {
             'dob': _dob == null ? null : dateKey(_dob!),
             'education_status': _educationStatus,
             'dream_goal': dreamGoal,
-            'main_mission': dreamGoal,
             'skills': _skills,
             'interests': _interests,
             'current_role': _role.text.trim(),
             'yearly_goal': _yearlyGoal.text.trim(),
             'main_struggle': _struggle.text.trim(),
             'motivation_style': _motivationStyle,
+            'future_vision': _futureVision.text.trim(),
+            'success_definition': _successDefinition.text.trim(),
+            'goal_categories': _goalCategories,
+            'barriers': _barriers,
+            'strengths': _strengths,
+            'skills_to_learn': _skillsToLearn,
           })
           .eq('user_id', SupabaseService.currentUserId);
       if (!mounted) return;
