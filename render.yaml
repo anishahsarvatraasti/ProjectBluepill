@@ -1,48 +1,57 @@
 services:
   - type: web
-    name: project-bluepill-worker
+    name: bluepill-mcp
     runtime: python
-    rootDir: worker
-    region: singapore
+    repo: https://github.com/anishahsarvatraasti/ProjectBluepill.git
+    rootDir: mcp-server
     plan: free
+    region: singapore
+    branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /healthz
-    autoDeployTrigger: commit
+    startCommand: uvicorn server:app --host 0.0.0.0 --port 10000
+    healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.10
       - key: SUPABASE_URL
-        value: https://qhunsphxuzmheduacull.supabase.co
-      - key: CORS_ALLOW_ORIGINS
-        value: https://project-bluepill.web.app,http://localhost:3000
-      - key: AI_PROVIDER
-        value: openrouter
-      - key: OPENAI_MODEL
-        value: gpt-4o-mini
-      - key: OPENAI_BASE_URL
-        value: https://api.openai.com/v1
-      - key: OPENROUTER_BASE_URL
-        value: https://openrouter.ai/api/v1
-      - key: OPENROUTER_MODEL
-        value: openrouter/free
-      - key: OPENROUTER_SITE_URL
-        value: https://project-bluepill.web.app
-      - key: OPENROUTER_APP_NAME
-        value: Project BluePill
-      - key: CRON_SCHEDULER_ENABLED
-        value: true
-      - key: CRON_SCHEDULER_INTERVAL_SECONDS
-        value: 30
-      - key: CRON_SCHEDULER_BATCH_SIZE
-        value: 10
-      - key: CRON_SCHEDULER_LOCK_TTL_SECONDS
-        value: 600
+        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: WORKER_BASE_URL
+        value: https://project-bluepill-worker.onrender.com
       - key: WORKER_SHARED_SECRET
+        sync: false
+      - key: MCP_PUBLIC_URL
+        value: https://bluepill-mcp.onrender.com
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: bluepill-worker
+    runtime: python
+    repo: https://github.com/anishahsarvatraasti/ProjectBluepill.git
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r worker/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
+    healthCheckPath: /healthz
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-      - key: OPENROUTER_API_KEY
+      - key: QSTASH_URL
+        value: https://qstash-us-east-1.upstash.io
+      - key: QSTASH_TOKEN
         sync: false
+      - key: WORKER_SHARED_SECRET
+        sync: false
+      - key: CORS_ALLOW_ORIGINS
+        value: https://project-bluepill.web.app
+      - key: CRON_SCHEDULER_ENABLED
+        value: true
