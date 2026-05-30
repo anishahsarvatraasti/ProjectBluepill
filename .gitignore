@@ -19,3 +19,4 @@ worker/**/__pycache__/
 .firebase/
 firebase-debug.log
 .DS_Store
+mcp-server/.env

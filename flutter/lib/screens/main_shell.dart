@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'agent_page.dart';
 import 'calendar_page.dart';
 import 'cron_jobs_page.dart';
 import 'dashboard_page.dart';
 import 'habits_page.dart';
-import 'agent_page.dart';
+import 'mcp_connect_page.dart';
 import 'mission_page.dart';
 import 'settings_page.dart';
-import 'todo_page.dart';
 import '../ui/project_logo.dart';
 
 class MainShell extends StatefulWidget {
@@ -21,16 +21,16 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
 
   static const _items = [
+    _NavItem('Agent', Icons.support_agent_outlined, AgentPage()),
     _NavItem('Dashboard', Icons.space_dashboard_outlined, DashboardPage()),
     _NavItem('Mission', Icons.flag_outlined, MissionPage()),
-    _NavItem('Todo', Icons.check_circle_outline, TodoPage()),
-    _NavItem('Calendar', Icons.calendar_month_outlined, CalendarPage()),
+    _NavItem('Planner', Icons.calendar_month_outlined, CalendarPage()),
     _NavItem('Habits', Icons.repeat, HabitsPage()),
     _NavItem('Cron Jobs', Icons.alarm_on_outlined, CronJobsPage()),
-    _NavItem('Agent', Icons.support_agent_outlined, AgentPage()),
+    _NavItem('Connect', Icons.cable, McpConnectPage()),
     _NavItem('Settings', Icons.settings_outlined, SettingsPage()),
   ];
-  static const _mobilePrimaryIndexes = [0, 1, 2, 5];
+  static const _mobilePrimaryIndexes = [0, 1, 2, 3];
 
   @override
   Widget build(BuildContext context) {
