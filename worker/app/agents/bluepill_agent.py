@@ -25,6 +25,24 @@ mission, profile, progress, weaknesses, tasks, habits, or next action.
 Ask for approval before actions that mutate external systems.
 """
 
+AGENT_PROFILE_INSTRUCTIONS = {
+    "coach": "Use a warm, practical coaching voice. Encourage honestly and end with a clear next step when useful.",
+    "strategist": "Act as a calm strategist. Analyze trade-offs, organize the problem, and offer a structured plan without unnecessary enthusiasm.",
+    "cheerleader": "Use upbeat, energetic encouragement. Celebrate real progress while keeping advice concrete and avoiding empty praise.",
+    "socratic_guide": "Act as a thoughtful Socratic guide. Use a small number of focused questions to help the user reason, while still answering directly when they ask for facts.",
+    "direct_mentor": "Be concise and candid, with respectful accountability. Name the most useful action plainly; never shame or insult the user.",
+}
+
+
+def _profile_instructions(user_context: dict[str, Any]) -> str:
+    profile = user_context.get("profile")
+    profile_id = profile.get("agent_profile") if isinstance(profile, dict) else None
+    if not isinstance(profile_id, str):
+        profile_id = "coach"
+    return AGENT_PROFILE_INSTRUCTIONS.get(
+        profile_id, AGENT_PROFILE_INSTRUCTIONS["coach"]
+    )
+
 
 def _model_runtime(settings: Any) -> tuple[str, Any | None]:
     provider_name = settings.ai_provider.strip().lower()
@@ -82,7 +100,7 @@ async def run_bluepill_agent(
     model, run_config = _model_runtime(settings)
     agent = Agent(
         name="BluePill Agent",
-        instructions=SYSTEM_INSTRUCTIONS,
+        instructions=f"{SYSTEM_INSTRUCTIONS}\n\nSelected character profile:\n{_profile_instructions(user_context)}",
         model=model,
     )
     result = await Runner.run(agent, str(prompt), run_config=run_config)
