@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 from app.jobs.agent_runs import AgentRunDelivery, process_agent_run
 from app.security.supabase_auth import AuthenticatedUser, verify_supabase_user
 from app.services.audit import write_audit_log
+from app.services.audio_input import prepare_attachments
 from app.services.supabase import SupabaseRestClient
+
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -77,6 +79,8 @@ async def agent_chat(
             detail="message is required.",
         )
 
+    attachments, audio_attachments = prepare_attachments(request.attachments)
+
     supabase = SupabaseRestClient()
     conversation_id = await _ensure_conversation(
         supabase,
@@ -91,7 +95,7 @@ async def agent_chat(
             "conversation_id": conversation_id,
             "role": "user",
             "text": message,
-            "attachments": request.attachments,
+            "attachments": attachments,
         },
     )
     await supabase.update_by_id(
@@ -112,7 +116,7 @@ async def agent_chat(
             "idempotency_key": request.idempotency_key,
             "input": {
                 "message": message,
-                "attachments": request.attachments,
+                "attachments": attachments,
             },
         },
     )
@@ -131,6 +135,7 @@ async def agent_chat(
     try:
         await process_agent_run(
             AgentRunDelivery(user_id=user.id, agent_run_id=str(run["id"])),
+            audio_attachments=audio_attachments,
         )
     except Exception:
         # process_agent_run records the failed status and error on the run.

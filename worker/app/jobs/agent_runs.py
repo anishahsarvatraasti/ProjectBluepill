@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.agents.bluepill_agent import run_bluepill_agent
 from app.services.audit import write_audit_log
+from app.services.audio_input import AudioInputError
 from app.services.context import load_user_context
 from app.services.supabase import SupabaseRestClient
 from app.tools.memory import search_memory
@@ -43,7 +44,9 @@ async def _load_conversation_history(
     return rows
 
 
-async def process_agent_run(delivery: AgentRunDelivery) -> None:
+async def process_agent_run(
+    delivery: AgentRunDelivery, *, audio_attachments: list[dict[str, Any]] | None = None
+) -> None:
     supabase = SupabaseRestClient()
     run = await supabase.select_by_id("agent_runs", delivery.agent_run_id)
     if not run:
@@ -70,6 +73,10 @@ async def process_agent_run(delivery: AgentRunDelivery) -> None:
         attachments = input_payload.get("attachments")
         if not isinstance(attachments, list):
             attachments = []
+        audio_count = sum("audio_format" in a for a in attachments)
+        if audio_count and len(audio_attachments or []) != audio_count:
+            raise ValueError("Audio is not retained for retries. Please resend the voice note.")
+        attachments = [a for a in attachments if "audio_format" not in a] + (audio_attachments or [])
         conversation_id = run.get("conversation_id")
         context = await load_user_context(supabase, delivery.user_id)
         history = await _load_conversation_history(
@@ -124,12 +131,15 @@ async def process_agent_run(delivery: AgentRunDelivery) -> None:
             agent_run_id=delivery.agent_run_id,
         )
     except Exception as error:
+        safe_error = str(error)
+        if audio_attachments and not isinstance(error, AudioInputError):
+            safe_error = "Audio request failed. Please resend the audio or check the worker audio model configuration."
         await supabase.update_by_id(
             "agent_runs",
             delivery.agent_run_id,
             {
                 "status": "failed",
-                "error": str(error),
+                "error": safe_error,
                 "completed_at": _now(),
                 "updated_at": _now(),
             },
@@ -142,6 +152,6 @@ async def process_agent_run(delivery: AgentRunDelivery) -> None:
             target_table="agent_runs",
             target_id=delivery.agent_run_id,
             agent_run_id=delivery.agent_run_id,
-            metadata={"error": str(error)},
+            metadata={"error": safe_error},
         )
         raise

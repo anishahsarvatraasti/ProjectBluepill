@@ -2,5 +2,5 @@ fastapi>=0.115
 uvicorn[standard]>=0.34
 httpx>=0.28
 pydantic-settings>=2.7
-openai-agents>=0.0.19
+openai-agents>=0.17.4
 croniter>=2.0

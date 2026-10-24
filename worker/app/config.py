@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = Field(alias="SUPABASE_SERVICE_ROLE_KEY")
     worker_shared_secret: str = Field(alias="WORKER_SHARED_SECRET")
     ai_provider: str = Field(default="openai", alias="AI_PROVIDER")
+    openai_audio_model: str = Field(default="gpt-audio-1.5", alias="OPENAI_AUDIO_MODEL")
+    openrouter_audio_model: str = Field(default="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", alias="OPENROUTER_AUDIO_MODEL")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_base_url: str = Field(
         default="https://api.openai.com/v1",
